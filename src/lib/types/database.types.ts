@@ -41,6 +41,7 @@ export interface Database {
           slug?: string;
           created_at?: string;
         };
+              Relationships: [];
       };
       company_users: {
         Row: {
@@ -64,6 +65,7 @@ export interface Database {
           role?: CompanyRole;
           created_at?: string;
         };
+              Relationships: [];
       };
       outlets: {
         Row: {
@@ -90,6 +92,7 @@ export interface Database {
           is_active?: boolean;
           created_at?: string;
         };
+              Relationships: [];
       };
       menu_categories: {
         Row: {
@@ -113,6 +116,7 @@ export interface Database {
           sort_order?: number;
           created_at?: string;
         };
+              Relationships: [];
       };
       menu_items: {
         Row: {
@@ -148,6 +152,7 @@ export interface Database {
           is_active?: boolean;
           created_at?: string;
         };
+              Relationships: [];
       };
     };
     Views: Record<string, never>;
@@ -160,5 +165,6 @@ export interface Database {
     Enums: {
       company_role: CompanyRole;
     };
+    CompositeTypes: Record<string, never>;
   };
 }

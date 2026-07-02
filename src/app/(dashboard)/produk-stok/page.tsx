@@ -1,13 +1,21 @@
-export default function Page() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-ink">Menu & Stok</h1>
-      <p className="mb-6 text-sm text-ink-muted">Daftar semua menu dan stok bahan baku</p>
+import { createClient } from "@/lib/supabase/server";
+import { ProdukStokClient } from "@/components/produk-stok/ProdukStokClient";
 
-      <div className="card p-6 text-sm text-ink-muted">
-        Halaman ini masih placeholder — akan diisi setelah skema database
-        untuk modul &ldquo;Menu & Stok&rdquo; dibuat.
-      </div>
-    </div>
+export default async function ProdukStokPage() {
+  const supabase = await createClient();
+
+  const [{ data: categories }, { data: items }] = await Promise.all([
+    supabase
+      .from("menu_categories")
+      .select("id, name, sort_order")
+      .order("sort_order"),
+    supabase
+      .from("menu_items")
+      .select("id, name, category_id, price, unit, is_active, code")
+      .order("name"),
+  ]);
+
+  return (
+    <ProdukStokClient categories={categories ?? []} items={items ?? []} />
   );
 }
