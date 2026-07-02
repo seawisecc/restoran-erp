@@ -18,16 +18,22 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
-  // Catatan: begitu tabel `company_users` + `companies` sudah dibuat
-  // (lihat step berikutnya: skema DB multi-tenant), query di bawah ini
-  // narik company pertama yang user itu punya akses. Nanti bisa
+  // Tipe hasil query join ditulis eksplisit di sini karena Supabase
+  // client kesulitan infer tipe field embed (companies(...)) dari
+  // hand-written Database types yang belum punya metadata relationship.
+  type MembershipQueryResult = {
+    role: ActiveCompanyContext["role"];
+    companies: ActiveCompanyContext["company"] | null;
+  };
+
+  // Narik company pertama yang user itu punya akses. Nanti bisa
   // dikembangkan jadi "company terakhir dipilih" pakai cookie.
   const { data: membership } = await supabase
     .from("company_users")
     .select("role, companies(id, name, slug, created_at)")
     .eq("user_id", user.id)
     .limit(1)
-    .maybeSingle();
+    .maybeSingle<MembershipQueryResult>();
 
   if (!membership || !membership.companies) {
     // User login tapi belum terhubung ke company manapun.
@@ -35,8 +41,8 @@ export default async function DashboardLayout({
   }
 
   const activeCompany: ActiveCompanyContext = {
-    company: membership.companies as unknown as ActiveCompanyContext["company"],
-    role: membership.role as ActiveCompanyContext["role"],
+    company: membership.companies,
+    role: membership.role,
   };
 
   return (

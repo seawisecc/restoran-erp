@@ -6,7 +6,7 @@ export default function Page() {
 
       <div className="card p-6 text-sm text-ink-muted">
         Halaman ini masih placeholder — akan diisi setelah skema database
-        untuk modul "Pembelian" dibuat.
+        untuk modul &ldquo;Pembelian&rdquo; dibuat.
       </div>
     </div>
   );

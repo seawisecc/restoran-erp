@@ -1,15 +1,13 @@
 /**
- * File ini SEMENTARA ditulis manual sebagai placeholder.
+ * Tipe ini sekarang sudah ditulis manual supaya cocok dengan skema di
+ * supabase/migrations/0001_init_multitenant.sql
  *
- * Setelah skema database (tabel companies, company_users, dst) dibuat di
- * Supabase, generate ulang file ini secara otomatis dengan:
+ * Ke depannya, kalau lo nambah tabel baru, tipe di sini juga perlu
+ * di-update (manual, atau generate otomatis lewat Supabase CLI):
  *
  *   npx supabase login
  *   npx supabase link --project-ref <project-id>
  *   npm run supabase:types
- *
- * Jangan edit manual setelah di-generate — biar selalu sinkron dengan
- * skema database yang sebenarnya.
  */
 export type Json =
   | string
@@ -19,11 +17,148 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+export type CompanyRole = "owner" | "manager" | "kasir" | "staff";
+
 export interface Database {
   public: {
-    Tables: Record<string, never>;
+    Tables: {
+      companies: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string;
+          created_at?: string;
+        };
+      };
+      company_users: {
+        Row: {
+          id: string;
+          company_id: string;
+          user_id: string;
+          role: CompanyRole;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          user_id: string;
+          role?: CompanyRole;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          user_id?: string;
+          role?: CompanyRole;
+          created_at?: string;
+        };
+      };
+      outlets: {
+        Row: {
+          id: string;
+          company_id: string;
+          name: string;
+          address: string | null;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          name: string;
+          address?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          name?: string;
+          address?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+        };
+      };
+      menu_categories: {
+        Row: {
+          id: string;
+          company_id: string;
+          name: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          name: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          name?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+      };
+      menu_items: {
+        Row: {
+          id: string;
+          company_id: string;
+          category_id: string | null;
+          code: string | null;
+          name: string;
+          unit: string;
+          price: number;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          category_id?: string | null;
+          code?: string | null;
+          name: string;
+          unit?: string;
+          price?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          category_id?: string | null;
+          code?: string | null;
+          name?: string;
+          unit?: string;
+          price?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+      };
+    };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
+    Functions: {
+      get_my_company_ids: {
+        Args: Record<string, never>;
+        Returns: string[];
+      };
+    };
+    Enums: {
+      company_role: CompanyRole;
+    };
   };
 }
