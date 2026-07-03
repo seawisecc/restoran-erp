@@ -1,6 +1,8 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
+import { History } from "lucide-react";
 import { openOrCreateOrder } from "@/app/(dashboard)/transaksi/actions";
 
 type Table = { id: string; name: string; seats: number };
@@ -44,13 +46,21 @@ export function TableGridClient({
             {tables.length} meja &middot; {openOrders.length} sedang terisi
           </p>
         </div>
-        <div className="flex gap-4 text-xs text-ink-muted">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-surface-border" /> Kosong
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-accent-warning" /> Terisi
-          </span>
+        <div className="flex items-center gap-4">
+          <div className="flex gap-4 text-xs text-ink-muted">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-surface-border" /> Kosong
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-accent-warning" /> Terisi
+            </span>
+          </div>
+          <Link
+            href="/transaksi/riwayat"
+            className="flex items-center gap-1.5 rounded-lg border border-surface-border bg-surface-card px-3 py-1.5 text-xs font-semibold text-ink-muted hover:text-ink"
+          >
+            <History size={14} /> Riwayat
+          </Link>
         </div>
       </div>
 
