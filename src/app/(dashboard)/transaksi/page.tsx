@@ -1,13 +1,23 @@
-export default function Page() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-ink">Transaksi</h1>
-      <p className="mb-6 text-sm text-ink-muted">Kasir dan riwayat transaksi</p>
+import { createClient } from "@/lib/supabase/server";
+import { TableGridClient } from "@/components/transaksi/TableGridClient";
 
-      <div className="card p-6 text-sm text-ink-muted">
-        Halaman ini masih placeholder — akan diisi setelah skema database
-        untuk modul &ldquo;Transaksi&rdquo; dibuat.
-      </div>
-    </div>
+export default async function TransaksiPage() {
+  const supabase = (await createClient()) as any;
+
+  const { data: tables } = await supabase
+    .from("restaurant_tables")
+    .select("id, name, seats")
+    .order("name");
+
+  const { data: openOrders } = await supabase
+    .from("orders")
+    .select("id, table_id, created_at")
+    .eq("status", "open");
+
+  return (
+    <TableGridClient
+      tables={tables ?? []}
+      openOrders={openOrders ?? []}
+    />
   );
 }
