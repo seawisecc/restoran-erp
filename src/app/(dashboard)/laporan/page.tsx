@@ -1,13 +1,29 @@
-export default function Page() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-ink">Laporan</h1>
-      <p className="mb-6 text-sm text-ink-muted">Laporan penjualan dan keuangan</p>
+import { createClient } from "@/lib/supabase/server";
+import { LaporanClient } from "@/components/laporan/LaporanClient";
 
-      <div className="card p-6 text-sm text-ink-muted">
-        Halaman ini masih placeholder — akan diisi setelah skema database
-        untuk modul &ldquo;Laporan&rdquo; dibuat.
-      </div>
-    </div>
+export default async function LaporanPage() {
+  const supabase = (await createClient()) as any;
+
+  const { data: paidOrders } = await supabase
+    .from("orders")
+    .select("id, total, paid_at")
+    .eq("status", "paid")
+    .order("paid_at", { ascending: true });
+
+  const orderIds = (paidOrders ?? []).map((o: { id: string }) => o.id);
+
+  const { data: orderItems } =
+    orderIds.length > 0
+      ? await supabase
+          .from("order_items")
+          .select("order_id, name, qty, price")
+          .in("order_id", orderIds)
+      : { data: [] };
+
+  return (
+    <LaporanClient
+      orders={paidOrders ?? []}
+      orderItems={orderItems ?? []}
+    />
   );
 }
