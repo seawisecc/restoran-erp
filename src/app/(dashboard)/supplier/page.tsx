@@ -1,13 +1,13 @@
-export default function Page() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-ink">Supplier</h1>
-      <p className="mb-6 text-sm text-ink-muted">Daftar supplier dan kontak</p>
+import { createClient } from "@/lib/supabase/server";
+import { SupplierClient } from "@/components/supplier/SupplierClient";
 
-      <div className="card p-6 text-sm text-ink-muted">
-        Halaman ini masih placeholder — akan diisi setelah skema database
-        untuk modul &ldquo;Supplier&rdquo; dibuat.
-      </div>
-    </div>
-  );
+export default async function SupplierPage() {
+  const supabase = (await createClient()) as any;
+
+  const { data: suppliers } = await supabase
+    .from("suppliers")
+    .select("id, name, contact_person, phone, address")
+    .order("name");
+
+  return <SupplierClient suppliers={suppliers ?? []} />;
 }

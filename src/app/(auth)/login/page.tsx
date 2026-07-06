@@ -23,7 +23,7 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(`[DEBUG] ${error.message}`);
+      setError("Email atau password salah.");
       setLoading(false);
       return;
     }
