@@ -7,6 +7,7 @@ import { openOrCreateOrder } from "@/app/(dashboard)/transaksi/actions";
 
 type Table = { id: string; name: string; seats: number };
 type OpenOrder = { id: string; table_id: string | null; created_at: string };
+type Outlet = { id: string; name: string };
 
 function timeAgo(iso: string) {
   const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -17,9 +18,13 @@ function timeAgo(iso: string) {
 export function TableGridClient({
   tables,
   openOrders,
+  outlets,
+  activeOutletId,
 }: {
   tables: Table[];
   openOrders: OpenOrder[];
+  outlets: Outlet[];
+  activeOutletId: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -64,6 +69,27 @@ export function TableGridClient({
         </div>
       </div>
 
+      {/* Switcher outlet — cuma muncul kalau company punya lebih dari
+          1 outlet aktif. Kalau cuma 1 outlet, gak perlu nampilin ini
+          biar gak nambah langkah buat kasir. */}
+      {outlets.length > 1 && (
+        <div className="mb-5 flex gap-2">
+          {outlets.map((o) => (
+            <Link
+              key={o.id}
+              href={`/transaksi?outlet=${o.id}`}
+              className={`rounded-full border px-4 py-1.5 text-sm font-semibold ${
+                o.id === activeOutletId
+                  ? "border-accent bg-accent text-white"
+                  : "border-surface-border bg-surface-card text-ink-muted"
+              }`}
+            >
+              {o.name}
+            </Link>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-3.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
         {sortedTables.map((t) => {
           const order = orderByTable.get(t.id);
@@ -90,8 +116,9 @@ export function TableGridClient({
 
       {tables.length === 0 && (
         <div className="card p-10 text-center text-sm text-ink-muted">
-          Belum ada meja terdaftar. Tambahkan lewat Supabase SQL Editor
-          atau menu Pengaturan (segera hadir).
+          {outlets.length === 0
+            ? "Belum ada outlet aktif. Tambahkan lewat menu Pengaturan."
+            : "Belum ada meja di outlet ini. Tambahkan lewat menu Pengaturan."}
         </div>
       )}
     </div>

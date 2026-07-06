@@ -1,13 +1,18 @@
-export default function Page() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-ink">Pengaturan</h1>
-      <p className="mb-6 text-sm text-ink-muted">Pengaturan company, outlet, dan user</p>
+import { createClient } from "@/lib/supabase/server";
+import { PengaturanClient } from "@/components/pengaturan/PengaturanClient";
 
-      <div className="card p-6 text-sm text-ink-muted">
-        Halaman ini masih placeholder — akan diisi setelah skema database
-        untuk modul &ldquo;Pengaturan&rdquo; dibuat.
-      </div>
-    </div>
-  );
+export default async function PengaturanPage() {
+  const supabase = (await createClient()) as any;
+
+  const { data: outlets } = await supabase
+    .from("outlets")
+    .select("id, name, address, is_active")
+    .order("name");
+
+  const { data: tables } = await supabase
+    .from("restaurant_tables")
+    .select("id, name, seats, outlets(name)")
+    .order("name");
+
+  return <PengaturanClient outlets={outlets ?? []} tables={tables ?? []} />;
 }

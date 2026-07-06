@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 // versi terbaru @supabase/supabase-js untuk operasi tulis. RLS di
 // database tetap jadi lapisan keamanan utama, jadi ini aman dipakai.
 
-async function getActiveCompanyAndOutlet() {
+async function getActiveCompanyId() {
   const supabase = (await createClient()) as any;
   const {
     data: { user },
@@ -24,25 +24,27 @@ async function getActiveCompanyAndOutlet() {
     .maybeSingle();
   if (!membership) throw new Error("User belum terhubung ke company manapun.");
 
-  const { data: outlet } = await supabase
-    .from("outlets")
-    .select("id")
-    .eq("company_id", membership.company_id)
-    .limit(1)
-    .maybeSingle();
-  if (!outlet) throw new Error("Company ini belum punya outlet.");
-
-  return { companyId: membership.company_id as string, outletId: outlet.id as string };
+  return membership.company_id as string;
 }
 
 /**
  * Dipanggil pas kasir klik meja. Kalau meja itu udah ada order yang
  * masih 'open', langsung dipakai lagi (biar gak dobel order per meja).
  * Kalau belum ada, bikin order baru.
+ *
+ * Penting: outlet_id order diambil dari meja itu sendiri (bukan
+ * ditebak/diasumsikan), supaya benar walau company punya banyak outlet.
  */
 export async function openOrCreateOrder(tableId: string) {
   const supabase = (await createClient()) as any;
-  const { companyId, outletId } = await getActiveCompanyAndOutlet();
+  const companyId = await getActiveCompanyId();
+
+  const { data: table } = await supabase
+    .from("restaurant_tables")
+    .select("id, outlet_id")
+    .eq("id", tableId)
+    .maybeSingle();
+  if (!table) throw new Error("Meja tidak ditemukan.");
 
   const { data: existing } = await supabase
     .from("orders")
@@ -60,7 +62,7 @@ export async function openOrCreateOrder(tableId: string) {
     .from("orders")
     .insert({
       company_id: companyId,
-      outlet_id: outletId,
+      outlet_id: table.outlet_id,
       table_id: tableId,
       status: "open",
     })
