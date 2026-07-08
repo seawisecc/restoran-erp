@@ -1,9 +1,13 @@
 export type CompanyRole = "owner" | "manager" | "kasir" | "staff";
 
+export type CompanyStatus = "pending" | "approved" | "rejected";
+
 export interface Company {
   id: string;
   name: string;
   slug: string;
+  status: CompanyStatus;
+  subscription_expires_at: string | null;
   created_at: string;
 }
 

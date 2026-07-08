@@ -3,28 +3,23 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { signUpAndCreateCompany } from "./actions";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
-  const supabase = createClient();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const formData = new FormData(e.currentTarget);
+    const result = await signUpAndCreateCompany(formData);
 
-    if (error) {
-      setError("Email atau password salah.");
+    if (!result.success) {
+      setError(result.error);
       setLoading(false);
       return;
     }
@@ -36,48 +31,55 @@ export default function LoginPage() {
   return (
     <div className="card w-full max-w-sm p-8">
       <h1 className="text-xl font-bold text-ink">RestoERP</h1>
-      <p className="mb-6 text-sm text-ink-muted">Masuk ke akun anda</p>
+      <p className="mb-6 text-sm text-ink-muted">Daftarkan restoran anda</p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
           <label className="mb-1 block text-sm font-medium text-ink">
-            Email
+            Nama Restoran
           </label>
           <input
-            type="email"
+            name="company_name"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent"
+            placeholder="misal: Warung Makan Sedap"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-ink">Email</label>
+          <input
+            type="email"
+            name="email"
+            required
             className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent"
             placeholder="nama@resto.com"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink">
-            Password
-          </label>
+          <label className="mb-1 block text-sm font-medium text-ink">Password</label>
           <input
             type="password"
+            name="password"
             required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            minLength={6}
             className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent"
-            placeholder="••••••••"
+            placeholder="Minimal 6 karakter"
           />
         </div>
 
         {error && <p className="text-sm text-accent-danger">{error}</p>}
 
         <button type="submit" disabled={loading} className="btn-primary mt-2">
-          {loading ? "Memproses..." : "Masuk"}
+          {loading ? "Memproses..." : "Daftar"}
         </button>
       </form>
 
       <p className="mt-5 text-center text-sm text-ink-muted">
-        Belum punya akun?{" "}
-        <Link href="/signup" className="font-medium text-accent-link">
-          Daftar restoran baru
+        Sudah punya akun?{" "}
+        <Link href="/login" className="font-medium text-accent-link">
+          Masuk di sini
         </Link>
       </p>
     </div>

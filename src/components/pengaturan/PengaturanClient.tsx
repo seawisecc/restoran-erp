@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Building2, Pencil, Plus, Trash2, UtensilsCrossed } from "lucide-react";
+import { Building2, Pencil, Plus, QrCode, Trash2, UtensilsCrossed } from "lucide-react";
 import { deleteTable, toggleOutletActive } from "@/app/(dashboard)/pengaturan/actions";
 import { OutletFormModal } from "./OutletFormModal";
 import { TableFormModal } from "./TableFormModal";
+import { TableQrModal } from "./TableQrModal";
 
 type Outlet = {
   id: string;
@@ -30,6 +31,7 @@ export function PengaturanClient({
   const [outletModalOpen, setOutletModalOpen] = useState(false);
   const [editingOutlet, setEditingOutlet] = useState<Outlet | null>(null);
   const [tableModalOpen, setTableModalOpen] = useState(false);
+  const [qrTable, setQrTable] = useState<TableRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleToggleOutlet(id: string, current: boolean) {
@@ -174,13 +176,22 @@ export function PengaturanClient({
                       <p className="text-sm font-bold text-ink">{t.name}</p>
                       <p className="text-xs text-ink-muted">{t.seats} kursi</p>
                     </div>
-                    <button
-                      onClick={() => handleDeleteTable(t.id, t.name)}
-                      disabled={isPending}
-                      className="rounded-md p-1.5 text-ink-muted hover:bg-surface hover:text-accent-danger"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setQrTable(t)}
+                        className="rounded-md p-1.5 text-ink-muted hover:bg-surface hover:text-ink"
+                        aria-label={`QR ${t.name}`}
+                      >
+                        <QrCode size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTable(t.id, t.name)}
+                        disabled={isPending}
+                        className="rounded-md p-1.5 text-ink-muted hover:bg-surface hover:text-accent-danger"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -198,6 +209,12 @@ export function PengaturanClient({
         open={tableModalOpen}
         onClose={() => setTableModalOpen(false)}
         outlets={outlets}
+      />
+      <TableQrModal
+        open={Boolean(qrTable)}
+        onClose={() => setQrTable(null)}
+        tableId={qrTable?.id ?? ""}
+        tableName={qrTable?.name ?? ""}
       />
     </div>
   );
