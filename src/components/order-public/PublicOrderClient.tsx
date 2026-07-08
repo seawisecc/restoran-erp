@@ -1,21 +1,19 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Minus, Plus, ShoppingCart, X } from "lucide-react";
-import {
-  addPublicOrderItem,
-  updatePublicOrderItemQty,
-} from "@/app/o/[tableId]/actions";
+import { CheckCircle2, ClipboardList, Minus, Plus, ShoppingCart, X } from "lucide-react";
+import { submitPublicOrder } from "@/app/o/[tableId]/actions";
 
 type Category = { id: string; name: string; sort_order: number };
 type MenuItem = { id: string; name: string; category_id: string | null; price: number };
-type OrderItem = {
+type SubmittedItem = {
   id: string;
   menu_item_id: string | null;
   name: string;
   price: number;
   qty: number;
 };
+type CartItem = { id: string; name: string; price: number; qty: number };
 
 function rupiah(n: number) {
   return "Rp " + Math.round(n).toLocaleString("id-ID");
@@ -32,52 +30,93 @@ export function PublicOrderClient({
   tableId: string;
   tableName: string;
   companyName: string;
-  initialItems: OrderItem[];
+  initialItems: SubmittedItem[];
   categories: Category[];
   menuItems: MenuItem[];
 }) {
   const [activeCat, setActiveCat] = useState<string | "all">("all");
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [justSubmitted, setJustSubmitted] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // initialItems ke-refresh otomatis tiap ada action (lewat
-  // revalidatePath), jadi ini selalu representasi terbaru dari DB.
-  const items = initialItems;
+  // Item yang UDAH kekirim ke kasir (tersimpan di database).
+  const submittedItems = initialItems;
+  const submittedTotal = submittedItems.reduce((s, it) => s + it.price * it.qty, 0);
+  const submittedCount = submittedItems.reduce((s, it) => s + it.qty, 0);
 
   const filteredMenu = useMemo(() => {
     if (activeCat === "all") return menuItems;
     return menuItems.filter((m) => m.category_id === activeCat);
   }, [menuItems, activeCat]);
 
-  const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0);
-  const tax = Math.round(subtotal * 0.1);
-  const total = subtotal + tax;
-  const itemCount = items.reduce((s, it) => s + it.qty, 0);
+  const cartSubtotal = cart.reduce((s, it) => s + it.price * it.qty, 0);
+  const cartCount = cart.reduce((s, it) => s + it.qty, 0);
 
-  function handleAdd(item: MenuItem) {
-    startTransition(() => {
-      addPublicOrderItem(tableId, {
-        id: item.id,
-        name: item.name,
-        price: item.price,
-      });
+  function addToLocalCart(item: MenuItem) {
+    setCart((prev) => {
+      const existing = prev.find((c) => c.id === item.id);
+      if (existing) {
+        return prev.map((c) =>
+          c.id === item.id ? { ...c, qty: c.qty + 1 } : c,
+        );
+      }
+      return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1 }];
     });
   }
 
-  function handleQty(itemId: string, current: number, delta: number) {
-    startTransition(() => {
-      updatePublicOrderItemQty(tableId, itemId, current + delta);
+  function changeLocalQty(itemId: string, delta: number) {
+    setCart((prev) =>
+      prev
+        .map((c) => (c.id === itemId ? { ...c, qty: c.qty + delta } : c))
+        .filter((c) => c.qty > 0),
+    );
+  }
+
+  function handleSubmit() {
+    startTransition(async () => {
+      try {
+        await submitPublicOrder(tableId, cart);
+        setCart([]);
+        setJustSubmitted(true);
+        setCartOpen(false);
+        setTimeout(() => setJustSubmitted(false), 4500);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Gagal mengirim pesanan.");
+      }
     });
   }
 
   return (
     <div className="min-h-screen bg-surface pb-28">
       <header className="sticky top-0 z-10 border-b border-surface-border bg-surface-card px-4 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-          {companyName}
-        </p>
-        <h1 className="text-lg font-bold text-ink">{tableName}</h1>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              {companyName}
+            </p>
+            <h1 className="text-lg font-bold text-ink">{tableName}</h1>
+          </div>
+          <button
+            onClick={() => setCartOpen(true)}
+            className="relative flex items-center gap-1.5 rounded-lg border border-surface-border px-3 py-2 text-xs font-semibold text-ink-muted"
+          >
+            <ClipboardList size={14} /> Pesanan Saya
+            {submittedCount > 0 && (
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] text-white">
+                {submittedCount}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
+
+      {justSubmitted && (
+        <div className="mx-4 mt-3 flex items-center gap-2 rounded-xl bg-accent-successBg px-4 py-3 text-sm font-semibold text-accent-success">
+          <CheckCircle2 size={18} />
+          Pesanan berhasil dikirim ke dapur! Staf akan segera memproses.
+        </div>
+      )}
 
       <div className="px-4 py-4">
         <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
@@ -108,13 +147,12 @@ export function PublicOrderClient({
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {filteredMenu.map((item) => {
-            const inCart = items.find((it) => it.menu_item_id === item.id);
+            const inCart = cart.find((c) => c.id === item.id);
             return (
               <button
                 key={item.id}
-                disabled={isPending}
-                onClick={() => handleAdd(item)}
-                className="relative rounded-2xl bg-surface-card p-3 text-left disabled:opacity-60"
+                onClick={() => addToLocalCart(item)}
+                className="relative rounded-2xl bg-surface-card p-3 text-left"
               >
                 {inCart && (
                   <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-white">
@@ -141,35 +179,41 @@ export function PublicOrderClient({
         </div>
       </div>
 
-      {itemCount > 0 && !cartOpen && (
+      {/* Sticky bar cuma muncul kalau ada item yang BELUM dikirim */}
+      {cartCount > 0 && !cartOpen && (
         <button
           onClick={() => setCartOpen(true)}
           className="fixed inset-x-4 bottom-4 z-20 flex items-center justify-between rounded-2xl bg-accent px-5 py-4 text-white shadow-lg"
         >
           <span className="flex items-center gap-2 text-sm font-bold">
-            <ShoppingCart size={16} /> {itemCount} item
+            <ShoppingCart size={16} /> {cartCount} item belum dikirim
           </span>
-          <span className="text-sm font-bold">{rupiah(total)}</span>
+          <span className="text-sm font-bold">{rupiah(cartSubtotal)}</span>
         </button>
       )}
 
       {cartOpen && (
         <div className="fixed inset-0 z-30 flex items-end bg-black/40">
-          <div className="max-h-[80vh] w-full overflow-y-auto rounded-t-3xl bg-surface-card p-5">
+          <div className="max-h-[85vh] w-full overflow-y-auto rounded-t-3xl bg-surface-card p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-ink">Keranjang</h3>
+              <h3 className="text-lg font-bold text-ink">Pesanan Kamu</h3>
               <button onClick={() => setCartOpen(false)} className="text-ink-muted">
                 <X size={20} />
               </button>
             </div>
 
-            {items.length === 0 ? (
-              <p className="py-8 text-center text-sm text-ink-muted">
-                Keranjang kosong.
+            {/* ===== Bagian 1: keranjang baru, belum dikirim ===== */}
+            <div className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-muted">
+              Belum Dikirim
+            </div>
+            {cart.length === 0 ? (
+              <p className="mb-4 rounded-lg bg-surface py-6 text-center text-sm text-ink-muted">
+                Belum ada menu baru dipilih. Tap menu di halaman utama buat
+                nambah.
               </p>
             ) : (
               <div className="mb-4 flex flex-col gap-1">
-                {items.map((it) => (
+                {cart.map((it) => (
                   <div
                     key={it.id}
                     className="flex items-center justify-between border-b border-surface-border py-3"
@@ -183,8 +227,7 @@ export function PublicOrderClient({
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2">
                         <button
-                          disabled={isPending}
-                          onClick={() => handleQty(it.id, it.qty, -1)}
+                          onClick={() => changeLocalQty(it.id, -1)}
                           className="flex h-7 w-7 items-center justify-center rounded-md border border-surface-border"
                         >
                           <Minus size={13} />
@@ -193,8 +236,7 @@ export function PublicOrderClient({
                           {it.qty}
                         </span>
                         <button
-                          disabled={isPending}
-                          onClick={() => handleQty(it.id, it.qty, 1)}
+                          onClick={() => changeLocalQty(it.id, 1)}
                           className="flex h-7 w-7 items-center justify-center rounded-md border border-surface-border"
                         >
                           <Plus size={13} />
@@ -206,30 +248,51 @@ export function PublicOrderClient({
                     </div>
                   </div>
                 ))}
+                <div className="flex justify-between pt-2 text-sm font-bold text-ink">
+                  <span>Subtotal baru</span>
+                  <span>{rupiah(cartSubtotal)}</span>
+                </div>
               </div>
             )}
 
-            <div className="border-t border-surface-border pt-3">
-              <div className="mb-1 flex justify-between text-sm text-ink-muted">
-                <span>Subtotal</span>
-                <span>{rupiah(subtotal)}</span>
-              </div>
-              <div className="mb-2 flex justify-between text-sm text-ink-muted">
-                <span>Pajak (10%)</span>
-                <span>{rupiah(tax)}</span>
-              </div>
-              <div className="mb-4 flex justify-between text-base font-bold text-ink">
-                <span>Total</span>
-                <span>{rupiah(total)}</span>
-              </div>
-              <p className="mb-3 text-center text-xs text-ink-muted">
-                Pesanan otomatis terkirim ke kasir setiap kali kamu menambah
-                menu. Panggil staf kalau butuh bantuan atau siap membayar.
-              </p>
-              <button onClick={() => setCartOpen(false)} className="btn-primary w-full">
-                Tambah Menu Lagi
-              </button>
-            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={cart.length === 0 || isPending}
+              className="btn-primary mb-6 w-full disabled:opacity-40"
+            >
+              {isPending ? "Mengirim..." : `Kirim Pesanan (${rupiah(cartSubtotal)})`}
+            </button>
+
+            {/* ===== Bagian 2: yang udah pernah dikirim (read-only) ===== */}
+            {submittedItems.length > 0 && (
+              <>
+                <div className="mb-2 border-t border-surface-border pt-4 text-xs font-bold uppercase tracking-wide text-ink-muted">
+                  Sudah Dikirim ke Dapur
+                </div>
+                <div className="flex flex-col gap-1">
+                  {submittedItems.map((it) => (
+                    <div
+                      key={it.id}
+                      className="flex items-center justify-between py-2 opacity-70"
+                    >
+                      <p className="text-sm text-ink">
+                        {it.qty}&times; {it.name}
+                      </p>
+                      <p className="text-sm font-semibold text-ink">
+                        {rupiah(it.price * it.qty)}
+                      </p>
+                    </div>
+                  ))}
+                  <div className="flex justify-between border-t border-surface-border pt-2 text-sm font-bold text-ink">
+                    <span>Total sudah dikirim</span>
+                    <span>{rupiah(submittedTotal)}</span>
+                  </div>
+                </div>
+                <p className="mt-3 text-center text-xs text-ink-muted">
+                  Panggil staf kalau butuh bantuan atau siap membayar.
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}

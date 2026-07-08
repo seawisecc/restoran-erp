@@ -66,73 +66,59 @@ async function recalcTotals(orderId: string) {
   await admin.from("orders").update({ subtotal, tax, total }).eq("id", orderId);
 }
 
-export async function addPublicOrderItem(
-  tableId: string,
-  menuItem: { id: string; name: string; price: number },
-) {
+type CartItem = { id: string; name: string; price: number; qty: number };
+
+/**
+ * Dipanggil SEKALI pas tamu klik "Kirim Pesanan" — bukan tiap kali
+ * tap menu. Sebelum ini, keranjang cuma hidup di state React sisi
+ * browser, gak nyentuh database sama sekali.
+ */
+export async function submitPublicOrder(tableId: string, cartItems: CartItem[]) {
+  if (cartItems.length === 0) throw new Error("Keranjang masih kosong.");
+
   const { table, orderId } = await getOrCreateOrderForTable(tableId);
   const admin = createAdminClient() as any;
 
-  // Validasi: menu yang dipesan harus benar-benar milik company yang
-  // sama dengan meja ini. Ini mencegah orang iseng ngirim menuItemId
-  // dari resto lain lewat request manual.
-  const { data: menu } = await admin
+  // Validasi: semua menu yang dikirim harus beneran milik company
+  // yang sama dengan meja ini.
+  const menuIds = cartItems.map((c) => c.id);
+  const { data: validMenus } = await admin
     .from("menu_items")
-    .select("id, company_id")
-    .eq("id", menuItem.id)
-    .eq("company_id", table.company_id)
-    .maybeSingle();
-  if (!menu) throw new Error("Menu tidak valid.");
+    .select("id")
+    .in("id", menuIds)
+    .eq("company_id", table.company_id);
+  const validIds = new Set((validMenus ?? []).map((m: { id: string }) => m.id));
 
-  const { data: existingLine } = await admin
-    .from("order_items")
-    .select("id, qty")
-    .eq("order_id", orderId)
-    .eq("menu_item_id", menuItem.id)
-    .limit(1)
-    .maybeSingle();
+  for (const item of cartItems) {
+    if (!validIds.has(item.id)) continue;
 
-  if (existingLine) {
-    await admin
+    const { data: existingLine } = await admin
       .from("order_items")
-      .update({ qty: existingLine.qty + 1 })
-      .eq("id", existingLine.id);
-  } else {
-    await admin.from("order_items").insert({
-      order_id: orderId,
-      menu_item_id: menuItem.id,
-      name: menuItem.name,
-      price: menuItem.price,
-      qty: 1,
-    });
+      .select("id, qty")
+      .eq("order_id", orderId)
+      .eq("menu_item_id", item.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingLine) {
+      await admin
+        .from("order_items")
+        .update({ qty: existingLine.qty + item.qty })
+        .eq("id", existingLine.id);
+    } else {
+      await admin.from("order_items").insert({
+        order_id: orderId,
+        menu_item_id: item.id,
+        name: item.name,
+        price: item.price,
+        qty: item.qty,
+      });
+    }
   }
 
   await recalcTotals(orderId);
   revalidatePath(`/o/${tableId}`);
   revalidatePath(`/transaksi/${orderId}`);
-}
 
-export async function updatePublicOrderItemQty(
-  tableId: string,
-  itemId: string,
-  nextQty: number,
-) {
-  const admin = createAdminClient() as any;
-
-  const { data: item } = await admin
-    .from("order_items")
-    .select("order_id")
-    .eq("id", itemId)
-    .maybeSingle();
-  if (!item) return;
-
-  if (nextQty <= 0) {
-    await admin.from("order_items").delete().eq("id", itemId);
-  } else {
-    await admin.from("order_items").update({ qty: nextQty }).eq("id", itemId);
-  }
-
-  await recalcTotals(item.order_id);
-  revalidatePath(`/o/${tableId}`);
-  revalidatePath(`/transaksi/${item.order_id}`);
+  return { success: true as const };
 }
