@@ -8,6 +8,8 @@ export interface Company {
   slug: string;
   status: CompanyStatus;
   subscription_expires_at: string | null;
+  loyalty_earn_rate: number;
+  loyalty_redeem_rate: number;
   created_at: string;
 }
 

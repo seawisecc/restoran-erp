@@ -10,12 +10,14 @@ import {
   Truck,
   BarChart3,
   Settings,
+  Users,
 } from "lucide-react";
 
 const menu = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/produk-stok", label: "Menu & Stok", icon: UtensilsCrossed },
   { href: "/transaksi", label: "Transaksi", icon: ShoppingCart },
+  { href: "/pelanggan", label: "Pelanggan", icon: Users },
   { href: "/pembelian", label: "Pembelian", icon: Package },
   { href: "/supplier", label: "Supplier", icon: Truck },
   { href: "/laporan", label: "Laporan", icon: BarChart3 },

@@ -1,23 +1,30 @@
 import Link from "next/link";
-import { ChevronDown, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { CompanySwitcher } from "./CompanySwitcher";
 import { UserMenu } from "./UserMenu";
+
+type CompanyOption = { id: string; name: string };
 
 export function Topbar({
   companyName,
+  companies,
+  activeCompanyId,
   userEmail,
   isSuperAdmin,
 }: {
   companyName: string;
+  companies: CompanyOption[];
+  activeCompanyId: string;
   userEmail: string;
   isSuperAdmin?: boolean;
 }) {
   return (
     <header className="flex h-16 items-center justify-between border-b border-surface-border bg-surface-card px-4 md:px-6">
-      {/* Company switcher — dropdown isinya company yg user itu punya akses */}
-      <button className="flex items-center gap-2 rounded-lg border border-surface-border px-3 py-1.5 text-sm font-medium hover:bg-surface">
-        {companyName}
-        <ChevronDown size={14} className="text-ink-muted" />
-      </button>
+      <CompanySwitcher
+        companies={companies}
+        activeCompanyId={activeCompanyId}
+        activeName={companyName}
+      />
 
       <div className="flex items-center gap-3">
         {isSuperAdmin && (

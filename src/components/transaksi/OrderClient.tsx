@@ -2,12 +2,14 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, Minus, Plus } from "lucide-react";
+import { ChevronLeft, Gift, Minus, Plus } from "lucide-react";
 import {
   addOrderItem,
+  getCustomerPoints,
   payOrder,
   updateOrderItemQty,
 } from "@/app/(dashboard)/transaksi/actions";
+import { useCompany } from "@/components/providers/CompanyProvider";
 
 type Category = { id: string; name: string; sort_order: number };
 type MenuItem = { id: string; name: string; category_id: string | null; price: number };
@@ -36,8 +38,18 @@ export function OrderClient({
   categories: Category[];
   menuItems: MenuItem[];
 }) {
+  const { company } = useCompany();
+  const redeemRate = company.loyalty_redeem_rate;
+  const earnRate = company.loyalty_earn_rate;
+
   const [activeCat, setActiveCat] = useState<string | "all">("all");
   const [isPending, startTransition] = useTransition();
+
+  // ===== Loyalty poin =====
+  const [phone, setPhone] = useState("");
+  const [customerPoints, setCustomerPoints] = useState<number | null>(null);
+  const [checkingPoints, setCheckingPoints] = useState(false);
+  const [redeemChecked, setRedeemChecked] = useState(false);
 
   const filteredMenu = useMemo(() => {
     if (activeCat === "all") return menuItems;
@@ -56,11 +68,33 @@ export function OrderClient({
     });
   }
 
+  async function handleCheckPoints() {
+    const trimmed = phone.trim();
+    if (!trimmed) return;
+    setCheckingPoints(true);
+    const points = await getCustomerPoints(trimmed);
+    setCustomerPoints(points);
+    setCheckingPoints(false);
+  }
+
+  // Poin yang bisa dipakai dibatasi biar diskonnya gak lebih gede
+  // dari total belanja.
+  const maxRedeemablePoints =
+    redeemRate > 0 ? Math.floor(order.total / redeemRate) : 0;
+  const usablePoints =
+    customerPoints !== null ? Math.min(customerPoints, maxRedeemablePoints) : 0;
+  const discountAmount = redeemChecked ? usablePoints * redeemRate : 0;
+  const finalTotal = order.total - discountAmount;
+  const pointsToEarn = earnRate > 0 ? Math.floor(finalTotal / earnRate) : 0;
+
   function handlePay() {
     if (items.length === 0) return;
-    if (!confirm(`Konfirmasi pembayaran ${rupiah(order.total)}?`)) return;
+    if (!confirm(`Konfirmasi pembayaran ${rupiah(finalTotal)}?`)) return;
     startTransition(() => {
-      payOrder(order.id);
+      payOrder(order.id, {
+        phone: phone.trim() || undefined,
+        redeemPoints: redeemChecked ? usablePoints : 0,
+      });
     });
   }
 
@@ -145,7 +179,7 @@ export function OrderClient({
           <p className="text-xs text-ink-muted">{items.length} item</p>
         </div>
 
-        <div className="max-h-[40vh] flex-1 overflow-y-auto px-4 md:max-h-none">
+        <div className="max-h-[35vh] flex-1 overflow-y-auto px-4 md:max-h-none">
           {items.length === 0 ? (
             <p className="py-8 text-center text-sm text-ink-muted">
               Belum ada item. Tap menu di sebelah kiri untuk menambah.
@@ -187,18 +221,73 @@ export function OrderClient({
           )}
         </div>
 
+        {/* ===== Loyalty poin ===== */}
+        <div className="border-t border-surface-border p-4">
+          <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
+            <Gift size={13} /> Nomor HP Pelanggan (opsional)
+          </label>
+          <div className="flex gap-2">
+            <input
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setCustomerPoints(null);
+                setRedeemChecked(false);
+              }}
+              placeholder="08123456789"
+              className="flex-1 rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+            <button
+              onClick={handleCheckPoints}
+              disabled={!phone.trim() || checkingPoints}
+              className="rounded-lg border border-surface-border px-3 py-2 text-xs font-semibold text-ink-muted disabled:opacity-50"
+            >
+              {checkingPoints ? "..." : "Cek"}
+            </button>
+          </div>
+
+          {customerPoints !== null && (
+            <div className="mt-2 rounded-lg bg-surface p-2.5 text-xs">
+              <p className="mb-1 text-ink-muted">
+                Poin tersedia: <span className="font-bold text-ink">{customerPoints}</span>
+              </p>
+              {maxRedeemablePoints > 0 && customerPoints > 0 && (
+                <label className="flex items-center gap-2 text-ink">
+                  <input
+                    type="checkbox"
+                    checked={redeemChecked}
+                    onChange={(e) => setRedeemChecked(e.target.checked)}
+                  />
+                  Pakai {usablePoints} poin (potongan {rupiah(usablePoints * redeemRate)})
+                </label>
+              )}
+              {pointsToEarn > 0 && (
+                <p className="mt-1 text-accent-success">
+                  +{pointsToEarn} poin akan didapat dari transaksi ini
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="border-t border-surface-border p-4">
           <div className="mb-1 flex justify-between text-sm text-ink-muted">
             <span>Subtotal</span>
             <span>{rupiah(order.subtotal)}</span>
           </div>
-          <div className="mb-2 flex justify-between text-sm text-ink-muted">
+          <div className="mb-1 flex justify-between text-sm text-ink-muted">
             <span>Pajak (10%)</span>
             <span>{rupiah(order.tax)}</span>
           </div>
+          {discountAmount > 0 && (
+            <div className="mb-1 flex justify-between text-sm text-accent-success">
+              <span>Diskon Poin</span>
+              <span>-{rupiah(discountAmount)}</span>
+            </div>
+          )}
           <div className="mb-3 flex justify-between text-base font-bold text-ink">
             <span>Total</span>
-            <span>{rupiah(order.total)}</span>
+            <span>{rupiah(finalTotal)}</span>
           </div>
           <button
             onClick={handlePay}

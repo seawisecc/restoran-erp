@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CompanyProvider } from "@/components/providers/CompanyProvider";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { ACTIVE_COMPANY_COOKIE } from "@/lib/constants";
 import type { ActiveCompanyContext } from "@/types";
 
 export default async function DashboardLayout({
@@ -27,26 +29,41 @@ export default async function DashboardLayout({
     companies: ActiveCompanyContext["company"] | null;
   };
 
-  // Narik company pertama yang user itu punya akses. Nanti bisa
-  // dikembangkan jadi "company terakhir dipilih" pakai cookie.
-  const { data: membership } = await supabase
+  // Narik SEMUA company yang user ini punya akses (bisa lebih dari 1,
+  // misal konsultan/investor yang pegang beberapa resto).
+  const { data: memberships } = await supabase
     .from("company_users")
     .select(
-      "role, companies(id, name, slug, status, subscription_expires_at, created_at)",
+      "role, companies(id, name, slug, status, subscription_expires_at, loyalty_earn_rate, loyalty_redeem_rate, created_at)",
     )
     .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle<MembershipQueryResult>();
+    .returns<MembershipQueryResult[]>();
 
-  if (!membership || !membership.companies) {
+  const validMemberships = (memberships ?? []).filter((m) => m.companies);
+
+  if (validMemberships.length === 0) {
     // User login tapi belum terhubung ke company manapun.
     redirect("/login");
   }
 
+  // Company aktif ditentukan dari cookie (kalau user pernah switch
+  // sebelumnya dan cookie-nya masih valid buat salah satu company
+  // yang dia punya akses). Kalau enggak, default ke yang pertama.
+  const cookieStore = await cookies();
+  const preferredCompanyId = cookieStore.get(ACTIVE_COMPANY_COOKIE)?.value;
+  const activeMembership =
+    validMemberships.find((m) => m.companies!.id === preferredCompanyId) ??
+    validMemberships[0];
+
   const activeCompany: ActiveCompanyContext = {
-    company: membership.companies,
-    role: membership.role,
+    company: activeMembership.companies!,
+    role: activeMembership.role,
   };
+
+  const companyOptions = validMemberships.map((m) => ({
+    id: m.companies!.id,
+    name: m.companies!.name,
+  }));
 
   // Cek apakah user ini terdaftar sebagai Super Admin (buat nampilin
   // link ke /admin di Topbar). Ini query aman dilakukan pakai client
@@ -112,6 +129,8 @@ export default async function DashboardLayout({
         <div className="flex flex-1 flex-col pb-16 md:pb-0">
           <Topbar
             companyName={activeCompany.company.name}
+            companies={companyOptions}
+            activeCompanyId={activeCompany.company.id}
             userEmail={user.email ?? ""}
             isSuperAdmin={isSuperAdmin}
           />

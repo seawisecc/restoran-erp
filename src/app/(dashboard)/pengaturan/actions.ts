@@ -101,3 +101,31 @@ export async function deleteTable(id: string) {
   revalidatePath("/pengaturan");
   revalidatePath("/transaksi");
 }
+
+// ===================== LOYALTY =====================
+
+export async function updateLoyaltySettings(formData: FormData) {
+  const supabase = (await createClient()) as any;
+  const companyId = await getActiveCompanyId();
+
+  const earnRate = Number(formData.get("loyalty_earn_rate"));
+  const redeemRate = Number(formData.get("loyalty_redeem_rate"));
+
+  if (!Number.isFinite(earnRate) || earnRate <= 0) {
+    throw new Error("Rate poin didapat harus lebih dari 0.");
+  }
+  if (!Number.isFinite(redeemRate) || redeemRate <= 0) {
+    throw new Error("Rate poin ditukar harus lebih dari 0.");
+  }
+
+  const { error } = await supabase
+    .from("companies")
+    .update({
+      loyalty_earn_rate: earnRate,
+      loyalty_redeem_rate: redeemRate,
+    })
+    .eq("id", companyId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/pengaturan");
+}

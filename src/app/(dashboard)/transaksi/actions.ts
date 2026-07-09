@@ -148,12 +148,109 @@ async function recalculateOrderTotals(orderId: string) {
     .eq("id", orderId);
 }
 
-export async function payOrder(orderId: string) {
+/**
+ * Ngecek berapa poin yang dipunya pelanggan berdasarkan nomor HP.
+ * Dipanggil pas kasir ngetik nomor HP di layar bayar, buat nunjukin
+ * "pelanggan ini punya X poin" secara real-time.
+ */
+export async function getCustomerPoints(phone: string) {
   const supabase = (await createClient()) as any;
+  const companyId = await getActiveCompanyId();
+
+  const cleanPhone = phone.trim();
+  if (!cleanPhone) return 0;
+
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("points")
+    .eq("company_id", companyId)
+    .eq("phone", cleanPhone)
+    .maybeSingle();
+
+  return customer?.points ?? 0;
+}
+
+export async function payOrder(
+  orderId: string,
+  loyalty?: { phone?: string; redeemPoints?: number },
+) {
+  const supabase = (await createClient()) as any;
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select("company_id, total")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) throw new Error("Order tidak ditemukan.");
+
+  // Rate loyalty diambil dari pengaturan company (bisa diubah lewat
+  // halaman Pengaturan), bukan angka tetap di kode — dan WAJIB
+  // di-fetch dari database di sini (server), bukan dipercaya dari
+  // input client, biar gak bisa dimanipulasi.
+  const { data: companyRates } = await supabase
+    .from("companies")
+    .select("loyalty_earn_rate, loyalty_redeem_rate")
+    .eq("id", order.company_id)
+    .maybeSingle();
+
+  const earnRate = Number(companyRates?.loyalty_earn_rate ?? 10000);
+  const redeemRate = Number(companyRates?.loyalty_redeem_rate ?? 100);
+
+  let customerId: string | null = null;
+  let pointsEarned = 0;
+  let pointsRedeemed = 0;
+  let discountAmount = 0;
+  let finalTotal = Number(order.total);
+
+  const phone = loyalty?.phone?.trim();
+
+  if (phone) {
+    let { data: customer } = await supabase
+      .from("customers")
+      .select("id, points")
+      .eq("company_id", order.company_id)
+      .eq("phone", phone)
+      .maybeSingle();
+
+    if (!customer) {
+      const { data: created, error: createError } = await supabase
+        .from("customers")
+        .insert({ company_id: order.company_id, phone, points: 0 })
+        .select("id, points")
+        .single();
+      if (createError) throw new Error(createError.message);
+      customer = created;
+    }
+
+    customerId = customer.id;
+
+    const requestedRedeem = loyalty?.redeemPoints ?? 0;
+    if (requestedRedeem > 0 && customer.points >= requestedRedeem) {
+      pointsRedeemed = requestedRedeem;
+      discountAmount = requestedRedeem * redeemRate;
+      finalTotal = Math.max(0, finalTotal - discountAmount);
+    }
+
+    pointsEarned = earnRate > 0 ? Math.floor(finalTotal / earnRate) : 0;
+
+    const newPointsBalance = customer.points - pointsRedeemed + pointsEarned;
+    await supabase
+      .from("customers")
+      .update({ points: newPointsBalance })
+      .eq("id", customerId);
+  }
 
   const { error } = await supabase
     .from("orders")
-    .update({ status: "paid", paid_at: new Date().toISOString() })
+    .update({
+      status: "paid",
+      paid_at: new Date().toISOString(),
+      customer_id: customerId,
+      discount_amount: discountAmount,
+      points_earned: pointsEarned,
+      points_redeemed: pointsRedeemed,
+      total: finalTotal,
+    })
     .eq("id", orderId);
 
   if (error) throw new Error(error.message);
