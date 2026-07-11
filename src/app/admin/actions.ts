@@ -27,7 +27,7 @@ async function assertSuperAdmin() {
 
 export async function approveCompany(companyId: string) {
   await assertSuperAdmin();
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
 
   const { data: company } = await admin
     .from("companies")
@@ -35,7 +35,9 @@ export async function approveCompany(companyId: string) {
     .eq("id", companyId)
     .maybeSingle();
 
-  const updates: Record<string, unknown> = { status: "approved" };
+  const updates: { status: "approved"; subscription_expires_at?: string } = {
+    status: "approved",
+  };
 
   // Kalau belum ada masa aktif sama sekali (data lama / edge case),
   // kasih default 30 hari dari sekarang biar gak nyangkut null.
@@ -56,7 +58,7 @@ export async function approveCompany(companyId: string) {
 
 export async function rejectCompany(companyId: string) {
   await assertSuperAdmin();
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
 
   const { error } = await admin
     .from("companies")
@@ -74,7 +76,7 @@ export async function rejectCompany(companyId: string) {
  */
 export async function extendSubscription(companyId: string, days: number) {
   await assertSuperAdmin();
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
 
   const { data: company } = await admin
     .from("companies")
@@ -100,7 +102,7 @@ export async function extendSubscription(companyId: string, days: number) {
 
 export async function setSubscriptionDate(companyId: string, isoDate: string) {
   await assertSuperAdmin();
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
 
   const { error } = await admin
     .from("companies")

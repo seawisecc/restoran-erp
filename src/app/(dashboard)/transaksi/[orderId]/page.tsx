@@ -7,11 +7,11 @@ export default async function OrderPage({
 }: {
   params: { orderId: string };
 }) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, status, subtotal, tax, total, restaurant_tables(name)")
+    .select("id, company_id, status, subtotal, tax, total, restaurant_tables(name)")
     .eq("id", params.orderId)
     .maybeSingle();
 
@@ -26,11 +26,13 @@ export default async function OrderPage({
   const { data: categories } = await supabase
     .from("menu_categories")
     .select("id, name, sort_order")
+    .eq("company_id", order.company_id)
     .order("sort_order");
 
   const { data: menuItems } = await supabase
     .from("menu_items")
     .select("id, name, category_id, price")
+    .eq("company_id", order.company_id)
     .eq("is_active", true)
     .order("name");
 

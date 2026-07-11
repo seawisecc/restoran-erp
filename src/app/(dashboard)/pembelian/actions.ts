@@ -2,24 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-
-async function getActiveCompanyId() {
-  const supabase = (await createClient()) as any;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Belum login.");
-
-  const { data: membership } = await supabase
-    .from("company_users")
-    .select("company_id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-
-  if (!membership) throw new Error("User belum terhubung ke company manapun.");
-  return membership.company_id as string;
-}
+import { getActiveCompanyId } from "@/lib/get-active-company";
 
 type PurchaseItemInput = { name: string; unit: string; qty: number; price: number };
 
@@ -32,7 +15,7 @@ export async function createPurchase(data: {
   supplierId: string | null;
   items: PurchaseItemInput[];
 }) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
   const companyId = await getActiveCompanyId();
 
   if (data.items.length === 0) throw new Error("Minimal 1 item pembelian.");
@@ -99,7 +82,7 @@ export async function createPurchase(data: {
  * (barangnya bakal ke-double-count).
  */
 export async function receivePurchase(purchaseId: string) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   const { data: purchase } = await supabase
     .from("purchases")
@@ -141,7 +124,7 @@ export async function receivePurchase(purchaseId: string) {
 }
 
 export async function cancelPurchase(purchaseId: string) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
   const { error } = await supabase
     .from("purchases")
     .update({ status: "cancelled" })

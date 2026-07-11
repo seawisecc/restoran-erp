@@ -7,7 +7,7 @@ export default async function PublicOrderPage({
 }: {
   params: { tableId: string };
 }) {
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
 
   const { data: table } = await admin
     .from("restaurant_tables")

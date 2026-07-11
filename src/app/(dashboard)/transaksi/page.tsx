@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getActiveCompanyId } from "@/lib/get-active-company";
 import { TableGridClient } from "@/components/transaksi/TableGridClient";
 
 export default async function TransaksiPage({
@@ -6,11 +7,13 @@ export default async function TransaksiPage({
 }: {
   searchParams: { outlet?: string };
 }) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
+  const companyId = await getActiveCompanyId();
 
   const { data: outlets } = await supabase
     .from("outlets")
     .select("id, name")
+    .eq("company_id", companyId)
     .eq("is_active", true)
     .order("name");
 

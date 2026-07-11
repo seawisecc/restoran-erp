@@ -14,7 +14,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 
 async function getOrCreateOrderForTable(tableId: string) {
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
 
   const { data: table } = await admin
     .from("restaurant_tables")
@@ -50,7 +50,7 @@ async function getOrCreateOrderForTable(tableId: string) {
 }
 
 async function recalcTotals(orderId: string) {
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
   const { data: items } = await admin
     .from("order_items")
     .select("price, qty")
@@ -77,7 +77,7 @@ export async function submitPublicOrder(tableId: string, cartItems: CartItem[]) 
   if (cartItems.length === 0) throw new Error("Keranjang masih kosong.");
 
   const { table, orderId } = await getOrCreateOrderForTable(tableId);
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
 
   // Validasi: semua menu yang dikirim harus beneran milik company
   // yang sama dengan meja ini.

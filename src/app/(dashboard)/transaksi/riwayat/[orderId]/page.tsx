@@ -23,7 +23,7 @@ export default async function RiwayatDetailPage({
 }: {
   params: { orderId: string };
 }) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   const { data: order } = await supabase
     .from("orders")

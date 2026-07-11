@@ -2,27 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-
-async function getActiveCompanyId() {
-  const supabase = (await createClient()) as any;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Belum login.");
-
-  const { data: membership } = await supabase
-    .from("company_users")
-    .select("company_id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-
-  if (!membership) throw new Error("User belum terhubung ke company manapun.");
-  return membership.company_id as string;
-}
+import { getActiveCompanyId } from "@/lib/get-active-company";
 
 export async function createSupplier(formData: FormData) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
   const companyId = await getActiveCompanyId();
 
   const name = (formData.get("name") as string)?.trim();
@@ -45,7 +28,7 @@ export async function createSupplier(formData: FormData) {
 }
 
 export async function deleteSupplier(id: string) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
   const { error } = await supabase.from("suppliers").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/supplier");

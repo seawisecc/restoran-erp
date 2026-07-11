@@ -58,7 +58,7 @@ export async function signUpAndCreateCompany(
     return { success: false, error: "Gagal membuat akun. Coba lagi." };
   }
 
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
 
   // Pastikan slug unik — kalau nama restoran bentrok, tambahin suffix.
   let slug = slugify(companyName) || "resto";

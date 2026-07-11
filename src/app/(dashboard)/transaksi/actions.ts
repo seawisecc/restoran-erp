@@ -3,29 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-
-// Catatan soal `as any`: sama seperti di modul Menu & Stok, hand-written
-// Database types kita belum cocok sempurna dengan constraint generic
-// versi terbaru @supabase/supabase-js untuk operasi tulis. RLS di
-// database tetap jadi lapisan keamanan utama, jadi ini aman dipakai.
-
-async function getActiveCompanyId() {
-  const supabase = (await createClient()) as any;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Belum login.");
-
-  const { data: membership } = await supabase
-    .from("company_users")
-    .select("company_id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-  if (!membership) throw new Error("User belum terhubung ke company manapun.");
-
-  return membership.company_id as string;
-}
+import { getActiveCompanyId } from "@/lib/get-active-company";
 
 /**
  * Dipanggil pas kasir klik meja. Kalau meja itu udah ada order yang
@@ -36,7 +14,7 @@ async function getActiveCompanyId() {
  * ditebak/diasumsikan), supaya benar walau company punya banyak outlet.
  */
 export async function openOrCreateOrder(tableId: string) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
   const companyId = await getActiveCompanyId();
 
   const { data: table } = await supabase
@@ -79,7 +57,7 @@ export async function addOrderItem(
   orderId: string,
   menuItem: { id: string; name: string; price: number },
 ) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   // Kalau item ini udah ada di order, tambahin qty-nya aja daripada
   // bikin baris baru.
@@ -115,7 +93,7 @@ export async function updateOrderItemQty(
   itemId: string,
   nextQty: number,
 ) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   if (nextQty <= 0) {
     await supabase.from("order_items").delete().eq("id", itemId);
@@ -128,7 +106,7 @@ export async function updateOrderItemQty(
 }
 
 async function recalculateOrderTotals(orderId: string) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   const { data: items } = await supabase
     .from("order_items")
@@ -154,7 +132,7 @@ async function recalculateOrderTotals(orderId: string) {
  * "pelanggan ini punya X poin" secara real-time.
  */
 export async function getCustomerPoints(phone: string) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
   const companyId = await getActiveCompanyId();
 
   const cleanPhone = phone.trim();
@@ -174,7 +152,7 @@ export async function payOrder(
   orderId: string,
   loyalty?: { phone?: string; redeemPoints?: number },
 ) {
-  const supabase = (await createClient()) as any;
+  const supabase = await createClient();
 
   const { data: order } = await supabase
     .from("orders")
