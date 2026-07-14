@@ -95,21 +95,35 @@ export async function receivePurchase(purchaseId: string) {
 
   const { data: items } = await supabase
     .from("purchase_items")
-    .select("raw_material_id, qty")
+    .select("raw_material_id, qty, price")
     .eq("purchase_id", purchaseId);
 
   for (const item of items ?? []) {
     if (!item.raw_material_id) continue;
     const { data: material } = await supabase
       .from("raw_materials")
-      .select("stock_qty")
+      .select("stock_qty, cost_price")
       .eq("id", item.raw_material_id)
       .maybeSingle();
     if (!material) continue;
 
+    const oldStock = Number(material.stock_qty);
+    const oldCost = Number(material.cost_price);
+    const incomingQty = Number(item.qty);
+    const incomingPrice = Number(item.price);
+
+    const newStock = oldStock + incomingQty;
+    // Weighted average: gabungin nilai stok lama + nilai barang baru
+    // masuk, dibagi total qty. Kalau stok lama 0, cost baru = harga
+    // beli terakhir aja.
+    const newCost =
+      newStock > 0
+        ? (oldStock * oldCost + incomingQty * incomingPrice) / newStock
+        : incomingPrice;
+
     await supabase
       .from("raw_materials")
-      .update({ stock_qty: Number(material.stock_qty) + Number(item.qty) })
+      .update({ stock_qty: newStock, cost_price: newCost })
       .eq("id", item.raw_material_id);
   }
 

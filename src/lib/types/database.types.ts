@@ -146,6 +146,45 @@ export type Database = {
           },
         ]
       }
+      menu_item_recipes: {
+        Row: {
+          created_at: string
+          id: string
+          menu_item_id: string
+          qty_used: number
+          raw_material_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          menu_item_id: string
+          qty_used?: number
+          raw_material_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          menu_item_id?: string
+          qty_used?: number
+          raw_material_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_recipes_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_item_recipes_raw_material_id_fkey"
+            columns: ["raw_material_id"]
+            isOneToOne: false
+            referencedRelation: "raw_materials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_items: {
         Row: {
           category_id: string | null
@@ -201,6 +240,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          kds_status: Database["public"]["Enums"]["kds_status"]
           menu_item_id: string | null
           name: string
           order_id: string
@@ -210,6 +250,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          kds_status?: Database["public"]["Enums"]["kds_status"]
           menu_item_id?: string | null
           name: string
           order_id: string
@@ -219,6 +260,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          kds_status?: Database["public"]["Enums"]["kds_status"]
           menu_item_id?: string | null
           name?: string
           order_id?: string
@@ -468,6 +510,7 @@ export type Database = {
       raw_materials: {
         Row: {
           company_id: string
+          cost_price: number
           created_at: string
           id: string
           min_stock: number
@@ -477,6 +520,7 @@ export type Database = {
         }
         Insert: {
           company_id: string
+          cost_price?: number
           created_at?: string
           id?: string
           min_stock?: number
@@ -486,6 +530,7 @@ export type Database = {
         }
         Update: {
           company_id?: string
+          cost_price?: number
           created_at?: string
           id?: string
           min_stock?: number
@@ -592,6 +637,7 @@ export type Database = {
     }
     Enums: {
       company_role: "owner" | "manager" | "kasir" | "staff"
+      kds_status: "queued" | "preparing" | "ready"
       order_status: "open" | "paid" | "cancelled"
       purchase_status: "pending" | "received" | "cancelled"
     }
@@ -722,6 +768,7 @@ export const Constants = {
   public: {
     Enums: {
       company_role: ["owner", "manager", "kasir", "staff"],
+      kds_status: ["queued", "preparing", "ready"],
       order_status: ["open", "paid", "cancelled"],
       purchase_status: ["pending", "received", "cancelled"],
     },

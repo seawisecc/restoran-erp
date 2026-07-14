@@ -19,9 +19,19 @@ export default async function LaporanPage() {
     orderIds.length > 0
       ? await supabase
           .from("order_items")
-          .select("order_id, name, qty, price")
+          .select("order_id, menu_item_id, name, qty, price")
           .in("order_id", orderIds)
       : { data: [] };
+
+  // ===== Data buat tab Costing =====
+  const { data: menuItems } = await supabase
+    .from("menu_items")
+    .select(
+      "id, name, price, is_active, menu_item_recipes(qty_used, raw_materials(cost_price))",
+    )
+    .eq("company_id", companyId)
+    .eq("is_active", true)
+    .order("name");
 
   // Secara logika paid_at selalu ada isinya buat order berstatus
   // "paid" (di-set otomatis pas payOrder dijalankan) — tapi kolomnya
@@ -36,6 +46,7 @@ export default async function LaporanPage() {
     <LaporanClient
       orders={validOrders}
       orderItems={orderItems ?? []}
+      menuItems={menuItems ?? []}
     />
   );
 }

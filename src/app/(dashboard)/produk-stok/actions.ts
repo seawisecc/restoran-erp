@@ -68,3 +68,50 @@ export async function createMenuCategory(formData: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/produk-stok");
 }
+
+// ===================== RESEP (buat hitung HPP) =====================
+
+export async function getMenuItemRecipe(menuItemId: string) {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("menu_item_recipes")
+    .select("id, raw_material_id, qty_used, raw_materials(name, unit, cost_price)")
+    .eq("menu_item_id", menuItemId);
+
+  return data ?? [];
+}
+
+/**
+ * Nyimpen resep satu menu sekaligus — hapus semua baris lama, ganti
+ * dengan yang baru. Lebih simpel daripada nge-diff satu-satu, dan
+ * resep emang jarang diedit jadi gak masalah soal efisiensi.
+ */
+export async function saveMenuItemRecipe(
+  menuItemId: string,
+  lines: { rawMaterialId: string; qtyUsed: number }[],
+) {
+  const supabase = await createClient();
+
+  const { error: deleteError } = await supabase
+    .from("menu_item_recipes")
+    .delete()
+    .eq("menu_item_id", menuItemId);
+  if (deleteError) throw new Error(deleteError.message);
+
+  const validLines = lines.filter((l) => l.rawMaterialId && l.qtyUsed > 0);
+
+  if (validLines.length > 0) {
+    const { error: insertError } = await supabase.from("menu_item_recipes").insert(
+      validLines.map((l) => ({
+        menu_item_id: menuItemId,
+        raw_material_id: l.rawMaterialId,
+        qty_used: l.qtyUsed,
+      })),
+    );
+    if (insertError) throw new Error(insertError.message);
+  }
+
+  revalidatePath("/produk-stok");
+  revalidatePath("/laporan");
+}

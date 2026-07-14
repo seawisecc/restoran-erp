@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { ChefHat, Plus, Search, Trash2 } from "lucide-react";
 import { MenuFormModal } from "./MenuFormModal";
+import { RecipeFormModal } from "./RecipeFormModal";
 import { toggleMenuItemActive, deleteMenuItem } from "@/app/(dashboard)/produk-stok/actions";
 
 type Category = { id: string; name: string; sort_order: number };
@@ -15,17 +16,21 @@ type MenuItem = {
   is_active: boolean;
   code: string | null;
 };
+type RawMaterial = { id: string; name: string; unit: string; cost_price: number };
 
 export function ProdukStokClient({
   categories,
   items,
+  rawMaterials,
 }: {
   categories: Category[];
   items: MenuItem[];
+  rawMaterials: RawMaterial[];
 }) {
   const [search, setSearch] = useState("");
   const [activeCat, setActiveCat] = useState<string | "all">("all");
   const [modalOpen, setModalOpen] = useState(false);
+  const [recipeItem, setRecipeItem] = useState<MenuItem | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const categoryName = (id: string | null) =>
@@ -137,7 +142,7 @@ export function ProdukStokClient({
                 <p className="mb-2.5 text-sm font-bold text-ink">
                   Rp {item.price.toLocaleString("id-ID")}
                 </p>
-                <div className="flex items-center justify-between">
+                <div className="mb-2 flex items-center justify-between">
                   <button
                     onClick={() => handleToggle(item.id, item.is_active)}
                     disabled={isPending}
@@ -154,6 +159,12 @@ export function ProdukStokClient({
                     <Trash2 size={14} />
                   </button>
                 </div>
+                <button
+                  onClick={() => setRecipeItem(item)}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-surface-border py-1.5 text-xs font-semibold text-ink-muted hover:text-ink"
+                >
+                  <ChefHat size={13} /> Resep &amp; HPP
+                </button>
               </div>
             </div>
           ))}
@@ -164,6 +175,15 @@ export function ProdukStokClient({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         categories={categories}
+      />
+
+      <RecipeFormModal
+        open={Boolean(recipeItem)}
+        onClose={() => setRecipeItem(null)}
+        menuItemId={recipeItem?.id ?? null}
+        menuItemName={recipeItem?.name ?? ""}
+        menuItemPrice={recipeItem?.price ?? 0}
+        rawMaterials={rawMaterials}
       />
     </div>
   );
