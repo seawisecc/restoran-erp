@@ -2,7 +2,165 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getActiveCompanyId } from "@/lib/get-active-company";
+
+// Hanya owner yang boleh mengubah profil resto & mengelola pengguna.
+async function assertOwner(companyId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Belum login.");
+
+  const { data: membership } = await supabase
+    .from("company_users")
+    .select("role")
+    .eq("company_id", companyId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (membership?.role !== "owner") {
+    throw new Error("Hanya pemilik yang boleh melakukan aksi ini.");
+  }
+}
+
+// ===================== PROFIL RESTO =====================
+
+export async function updateCompanyProfile(formData: FormData) {
+  const companyId = await getActiveCompanyId();
+  await assertOwner(companyId);
+
+  const name = (formData.get("name") as string)?.trim();
+  const address = (formData.get("address") as string)?.trim() || null;
+  if (!name) throw new Error("Nama restoran wajib diisi.");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("companies")
+    .update({ name, address })
+    .eq("id", companyId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/pengaturan");
+  revalidatePath("/dashboard");
+}
+
+// ===================== MANAJEMEN PENGGUNA =====================
+
+const VALID_ROLES = ["owner", "manager", "kasir", "staff"] as const;
+
+function parseModules(formData: FormData, role: string): string[] | null {
+  // Owner selalu akses penuh -> modules null.
+  if (role === "owner") return null;
+  return formData.getAll("modules").map((m) => String(m));
+}
+
+export async function createTeamUser(formData: FormData) {
+  const companyId = await getActiveCompanyId();
+  await assertOwner(companyId);
+
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
+  const password = formData.get("password") as string;
+  const fullName = (formData.get("full_name") as string)?.trim() || null;
+  const role = (formData.get("role") as string) || "kasir";
+
+  if (!email || !password) throw new Error("Email dan password wajib diisi.");
+  if (password.length < 6) throw new Error("Password minimal 6 karakter.");
+  if (!VALID_ROLES.includes(role as (typeof VALID_ROLES)[number])) {
+    throw new Error("Role tidak valid.");
+  }
+
+  const admin = createAdminClient();
+
+  // Buat akun login (langsung terkonfirmasi biar bisa langsung dipakai).
+  const { data: created, error: createErr } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
+  });
+  if (createErr) throw new Error(createErr.message);
+
+  const userId = created.user?.id;
+  if (!userId) throw new Error("Gagal membuat akun.");
+
+  const { error: memberErr } = await admin.from("company_users").insert({
+    company_id: companyId,
+    user_id: userId,
+    role: role as (typeof VALID_ROLES)[number],
+    full_name: fullName,
+    modules: parseModules(formData, role),
+    is_active: true,
+  });
+  if (memberErr) throw new Error(memberErr.message);
+
+  revalidatePath("/pengaturan");
+}
+
+export async function updateTeamUser(membershipId: string, formData: FormData) {
+  const companyId = await getActiveCompanyId();
+  await assertOwner(companyId);
+
+  const fullName = (formData.get("full_name") as string)?.trim() || null;
+  const role = (formData.get("role") as string) || "kasir";
+  const isActive = formData.get("is_active") === "on";
+  if (!VALID_ROLES.includes(role as (typeof VALID_ROLES)[number])) {
+    throw new Error("Role tidak valid.");
+  }
+
+  const admin = createAdminClient();
+
+  // Pastikan membership ini memang milik company yang aktif (cegah
+  // edit lintas-tenant).
+  const { data: row } = await admin
+    .from("company_users")
+    .select("id, company_id")
+    .eq("id", membershipId)
+    .maybeSingle();
+  if (!row || row.company_id !== companyId) {
+    throw new Error("Data pengguna tidak ditemukan.");
+  }
+
+  const { error } = await admin
+    .from("company_users")
+    .update({
+      full_name: fullName,
+      role: role as (typeof VALID_ROLES)[number],
+      modules: parseModules(formData, role),
+      is_active: isActive,
+    })
+    .eq("id", membershipId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/pengaturan");
+}
+
+export async function deleteTeamUser(membershipId: string) {
+  const companyId = await getActiveCompanyId();
+  await assertOwner(companyId);
+
+  const admin = createAdminClient();
+  const { data: row } = await admin
+    .from("company_users")
+    .select("id, company_id, role")
+    .eq("id", membershipId)
+    .maybeSingle();
+  if (!row || row.company_id !== companyId) {
+    throw new Error("Data pengguna tidak ditemukan.");
+  }
+  if (row.role === "owner") {
+    throw new Error("Pemilik tidak bisa dihapus.");
+  }
+
+  const { error } = await admin
+    .from("company_users")
+    .delete()
+    .eq("id", membershipId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/pengaturan");
+}
 
 // ===================== OUTLET =====================
 

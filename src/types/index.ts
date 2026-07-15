@@ -18,9 +18,14 @@ export interface CompanyUser {
   company_id: string;
   user_id: string;
   role: CompanyRole;
+  full_name: string | null;
+  modules: string[] | null;
+  is_active: boolean;
 }
 
 export interface ActiveCompanyContext {
   company: Company;
   role: CompanyRole;
+  // Modul yang boleh diakses user aktif. null = akses penuh (owner).
+  modules: string[] | null;
 }

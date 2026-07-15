@@ -1,36 +1,40 @@
 import type { Config } from "tailwindcss";
 
-// Palet diturunkan dari referensi desain (screenshot ApotekERP):
-// sidebar slate-green gelap, konten cream/off-white, badge status hijau pastel.
+// Palet Seawise Enterprise Apps — Restaurants Edition.
+// Diselaraskan dengan Pharmacy Store Edition (apotek): sidebar hijau
+// slate gelap, konten cream/off-white, aksen hijau hutan + peach hangat.
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       colors: {
         sidebar: {
-          DEFAULT: "#1c2b27", // background sidebar
-          hover: "#28382f",   // hover/active menu item
+          DEFAULT: "#1b3426", // background sidebar (hijau hutan apotek)
+          hover: "#274536", // hover/active menu item
           foreground: "#e7e9e4",
-          muted: "#8f9c95",
+          muted: "#93a396",
         },
         surface: {
-          DEFAULT: "#f3f1ea", // background halaman utama
+          DEFAULT: "#eef0ea", // background halaman utama (base ambient apotek)
           card: "#ffffff",
-          border: "#e6e2d8",
+          border: "#e2ddd3",
         },
         ink: {
-          DEFAULT: "#1a1a1a", // teks utama
+          DEFAULT: "#1c2620", // teks utama
           muted: "#6b6f6a",
         },
         accent: {
-          DEFAULT: "#1a2420", // tombol primer (dark)
+          DEFAULT: "#1e3a2c", // tombol primer (hijau hutan)
+          hover: "#16281f", // hover tombol primer
+          peach: "#c2632f", // aksen hangat (titik logo, highlight)
+          peachBg: "#f6e7db",
           success: "#1f8a4c",
           successBg: "#e3f6e9",
           warning: "#b98900",
           warningBg: "#fdf3d6",
           danger: "#c0392b",
           dangerBg: "#fbe4e1",
-          link: "#2563eb",
+          link: "#1e3a2c",
         },
       },
       borderRadius: {
@@ -38,6 +42,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
+          "var(--font-sans)",
           "Inter",
           "-apple-system",
           "BlinkMacSystemFont",

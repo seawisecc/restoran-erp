@@ -69,23 +69,37 @@ export async function addOrderItem(
     .limit(1)
     .maybeSingle();
 
+  let lineId = existingLine?.id ?? "";
+  let lineQty = 1;
+
   if (existingLine) {
+    lineQty = existingLine.qty + 1;
     await supabase
       .from("order_items")
-      .update({ qty: existingLine.qty + 1 })
+      .update({ qty: lineQty })
       .eq("id", existingLine.id);
   } else {
-    await supabase.from("order_items").insert({
-      order_id: orderId,
-      menu_item_id: menuItem.id,
-      name: menuItem.name,
-      price: menuItem.price,
-      qty: 1,
-    });
+    const { data: inserted } = await supabase
+      .from("order_items")
+      .insert({
+        order_id: orderId,
+        menu_item_id: menuItem.id,
+        name: menuItem.name,
+        price: menuItem.price,
+        qty: 1,
+      })
+      .select("id, qty")
+      .single();
+    lineId = inserted?.id ?? "";
+    lineQty = inserted?.qty ?? 1;
   }
 
   await recalculateOrderTotals(orderId);
   revalidatePath(`/transaksi/${orderId}`);
+
+  // Dikembalikan supaya client bisa mengganti id sementara (optimistic)
+  // dengan id baris asli dari database.
+  return { id: lineId, qty: lineQty };
 }
 
 export async function updateOrderItemQty(

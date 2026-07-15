@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ChevronLeft, Gift, Minus, Plus } from "lucide-react";
 import {
@@ -45,6 +45,30 @@ export function OrderClient({
   const [activeCat, setActiveCat] = useState<string | "all">("all");
   const [isPending, startTransition] = useTransition();
 
+  // ===== Keranjang optimistic =====
+  // `cart` adalah sumber tampilan langsung: tiap tap menu / ubah qty
+  // meng-update state ini SEKETIKA, lalu server action jalan di
+  // belakang. Jadi kasir gak nunggu round-trip server tiap tap.
+  const [cart, setCart] = useState<OrderItem[]>(items);
+  const pendingCount = useRef(0);
+
+  // Sinkronkan ulang dari server hanya saat tidak ada aksi berjalan,
+  // supaya data optimistic gak ketimpa hasil lama.
+  useEffect(() => {
+    if (pendingCount.current === 0) setCart(items);
+  }, [items]);
+
+  function runAction(fn: () => Promise<unknown>) {
+    pendingCount.current += 1;
+    startTransition(async () => {
+      try {
+        await fn();
+      } finally {
+        pendingCount.current -= 1;
+      }
+    });
+  }
+
   // ===== Loyalty poin =====
   const [phone, setPhone] = useState("");
   const [customerPoints, setCustomerPoints] = useState<number | null>(null);
@@ -57,15 +81,56 @@ export function OrderClient({
   }, [menuItems, activeCat]);
 
   function handleAdd(item: MenuItem) {
-    startTransition(() => {
-      addOrderItem(order.id, { id: item.id, name: item.name, price: item.price });
+    // Update tampilan seketika.
+    setCart((prev) => {
+      const existing = prev.find((c) => c.menu_item_id === item.id);
+      if (existing) {
+        return prev.map((c) =>
+          c.menu_item_id === item.id ? { ...c, qty: c.qty + 1 } : c,
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: `temp-${item.id}`,
+          menu_item_id: item.id,
+          name: item.name,
+          price: item.price,
+          qty: 1,
+        },
+      ];
+    });
+
+    // Persist di belakang, lalu ganti id sementara dengan id asli.
+    runAction(async () => {
+      const res = await addOrderItem(order.id, {
+        id: item.id,
+        name: item.name,
+        price: item.price,
+      });
+      if (res?.id) {
+        setCart((prev) =>
+          prev.map((c) =>
+            c.menu_item_id === item.id ? { ...c, id: res.id, qty: res.qty } : c,
+          ),
+        );
+      }
     });
   }
 
   function handleQty(itemId: string, current: number, delta: number) {
-    startTransition(() => {
-      updateOrderItemQty(order.id, itemId, current + delta);
-    });
+    // Baris yang masih pakai id sementara belum punya id asli di DB —
+    // tunggu rekonsiliasi add dulu (jendela ini sangat singkat).
+    if (itemId.startsWith("temp-")) return;
+
+    const next = current + delta;
+    setCart((prev) =>
+      next <= 0
+        ? prev.filter((c) => c.id !== itemId)
+        : prev.map((c) => (c.id === itemId ? { ...c, qty: next } : c)),
+    );
+
+    runAction(() => updateOrderItemQty(order.id, itemId, next));
   }
 
   async function handleCheckPoints() {
@@ -77,18 +142,24 @@ export function OrderClient({
     setCheckingPoints(false);
   }
 
+  // Total dihitung dari keranjang optimistic (bukan dari order di
+  // server), supaya angka langsung ikut berubah tiap tap tanpa nunggu
+  // server recalc.
+  const subtotal = cart.reduce((s, it) => s + it.price * it.qty, 0);
+  const tax = Math.round(subtotal * 0.1);
+  const total = subtotal + tax;
+
   // Poin yang bisa dipakai dibatasi biar diskonnya gak lebih gede
   // dari total belanja.
-  const maxRedeemablePoints =
-    redeemRate > 0 ? Math.floor(order.total / redeemRate) : 0;
+  const maxRedeemablePoints = redeemRate > 0 ? Math.floor(total / redeemRate) : 0;
   const usablePoints =
     customerPoints !== null ? Math.min(customerPoints, maxRedeemablePoints) : 0;
   const discountAmount = redeemChecked ? usablePoints * redeemRate : 0;
-  const finalTotal = order.total - discountAmount;
+  const finalTotal = total - discountAmount;
   const pointsToEarn = earnRate > 0 ? Math.floor(finalTotal / earnRate) : 0;
 
   function handlePay() {
-    if (items.length === 0) return;
+    if (cart.length === 0) return;
     if (!confirm(`Konfirmasi pembayaran ${rupiah(finalTotal)}?`)) return;
     startTransition(() => {
       payOrder(order.id, {
@@ -147,9 +218,8 @@ export function OrderClient({
           {filteredMenu.map((item) => (
             <button
               key={item.id}
-              disabled={isPending}
               onClick={() => handleAdd(item)}
-              className="rounded-2xl border-2 border-transparent bg-surface-card p-3 text-left hover:border-accent disabled:opacity-60"
+              className="rounded-2xl border-2 border-transparent bg-surface-card p-3 text-left transition-colors hover:border-accent active:scale-[0.98]"
             >
               <div className="mb-2 flex h-16 items-center justify-center rounded-lg bg-gradient-to-br from-surface-border to-surface text-xl">
                 🍽️
@@ -176,16 +246,16 @@ export function OrderClient({
           <h3 className="text-base font-bold text-ink">
             Pesanan &mdash; {order.restaurant_tables?.name ?? "Meja"}
           </h3>
-          <p className="text-xs text-ink-muted">{items.length} item</p>
+          <p className="text-xs text-ink-muted">{cart.length} item</p>
         </div>
 
         <div className="max-h-[35vh] flex-1 overflow-y-auto px-4 md:max-h-none">
-          {items.length === 0 ? (
+          {cart.length === 0 ? (
             <p className="py-8 text-center text-sm text-ink-muted">
               Belum ada item. Tap menu di sebelah kiri untuk menambah.
             </p>
           ) : (
-            items.map((it) => (
+            cart.map((it) => (
               <div
                 key={it.id}
                 className="flex items-start justify-between border-b border-surface-border py-2.5"
@@ -197,17 +267,15 @@ export function OrderClient({
                   </p>
                   <div className="mt-1.5 flex items-center gap-2">
                     <button
-                      disabled={isPending}
                       onClick={() => handleQty(it.id, it.qty, -1)}
-                      className="flex h-6 w-6 items-center justify-center rounded-md border border-surface-border"
+                      className="flex h-6 w-6 items-center justify-center rounded-md border border-surface-border active:scale-95"
                     >
                       <Minus size={12} />
                     </button>
                     <span className="text-sm font-medium">{it.qty}</span>
                     <button
-                      disabled={isPending}
                       onClick={() => handleQty(it.id, it.qty, 1)}
-                      className="flex h-6 w-6 items-center justify-center rounded-md border border-surface-border"
+                      className="flex h-6 w-6 items-center justify-center rounded-md border border-surface-border active:scale-95"
                     >
                       <Plus size={12} />
                     </button>
@@ -273,11 +341,11 @@ export function OrderClient({
         <div className="border-t border-surface-border p-4">
           <div className="mb-1 flex justify-between text-sm text-ink-muted">
             <span>Subtotal</span>
-            <span>{rupiah(order.subtotal)}</span>
+            <span>{rupiah(subtotal)}</span>
           </div>
           <div className="mb-1 flex justify-between text-sm text-ink-muted">
             <span>Pajak (10%)</span>
-            <span>{rupiah(order.tax)}</span>
+            <span>{rupiah(tax)}</span>
           </div>
           {discountAmount > 0 && (
             <div className="mb-1 flex justify-between text-sm text-accent-success">
@@ -291,7 +359,7 @@ export function OrderClient({
           </div>
           <button
             onClick={handlePay}
-            disabled={isPending || items.length === 0}
+            disabled={isPending || cart.length === 0}
             className="w-full rounded-xl bg-accent py-3.5 text-sm font-bold text-white disabled:opacity-50"
           >
             Bayar

@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       companies: {
         Row: {
+          address: string | null
           created_at: string
           id: string
           loyalty_earn_rate: number
@@ -26,6 +27,7 @@ export type Database = {
           subscription_expires_at: string | null
         }
         Insert: {
+          address?: string | null
           created_at?: string
           id?: string
           loyalty_earn_rate?: number
@@ -36,6 +38,7 @@ export type Database = {
           subscription_expires_at?: string | null
         }
         Update: {
+          address?: string | null
           created_at?: string
           id?: string
           loyalty_earn_rate?: number
@@ -51,21 +54,30 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
+          full_name: string | null
           id: string
+          is_active: boolean
+          modules: string[] | null
           role: Database["public"]["Enums"]["company_role"]
           user_id: string
         }
         Insert: {
           company_id: string
           created_at?: string
+          full_name?: string | null
           id?: string
+          is_active?: boolean
+          modules?: string[] | null
           role?: Database["public"]["Enums"]["company_role"]
           user_id: string
         }
         Update: {
           company_id?: string
           created_at?: string
+          full_name?: string | null
           id?: string
+          is_active?: boolean
+          modules?: string[] | null
           role?: Database["public"]["Enums"]["company_role"]
           user_id?: string
         }

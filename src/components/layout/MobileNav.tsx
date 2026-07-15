@@ -9,21 +9,25 @@ import {
   BarChart3,
   Menu,
 } from "lucide-react";
+import { useCompany } from "@/components/providers/CompanyProvider";
+import { canAccessModule } from "@/lib/modules";
 
 const items = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/transaksi", label: "Kasir", icon: ShoppingCart },
-  { href: "/produk-stok", label: "Menu", icon: UtensilsCrossed },
-  { href: "/laporan", label: "Laporan", icon: BarChart3 },
-  { href: "/pengaturan", label: "Lainnya", icon: Menu },
+  { href: "/dashboard", key: "dashboard", label: "Home", icon: LayoutDashboard },
+  { href: "/transaksi", key: "transaksi", label: "Kasir", icon: ShoppingCart },
+  { href: "/produk-stok", key: "produk-stok", label: "Menu", icon: UtensilsCrossed },
+  { href: "/laporan", key: "laporan", label: "Laporan", icon: BarChart3 },
+  { href: "/pengaturan", key: "pengaturan", label: "Lainnya", icon: Menu },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { modules } = useCompany();
+  const visibleItems = items.filter((i) => canAccessModule(modules, i.key));
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-surface-border bg-surface-card md:hidden">
-      {items.map(({ href, label, icon: Icon }) => {
+      {visibleItems.map(({ href, label, icon: Icon }) => {
         const active = pathname.startsWith(href);
         return (
           <Link

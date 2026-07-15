@@ -31,6 +31,9 @@ export default async function DashboardLayout({
 
   // Narik SEMUA company yang user ini punya akses (bisa lebih dari 1,
   // misal konsultan/investor yang pegang beberapa resto).
+  // CATATAN: query ini sengaja TIDAK menyertakan kolom `modules` supaya
+  // jalur auth utama gak tergantung pada migrasi user-management. Modul
+  // diambil terpisah & defensif di bawah.
   const { data: memberships } = await supabase
     .from("company_users")
     .select(
@@ -55,9 +58,28 @@ export default async function DashboardLayout({
     validMemberships.find((m) => m.companies!.id === preferredCompanyId) ??
     validMemberships[0];
 
+  // Ambil modul akses user untuk company aktif secara DEFENSIF: kalau
+  // kolom `modules` belum ada (migrasi 0009 belum dijalankan) atau
+  // query gagal, default ke null = akses penuh, biar aplikasi tetap
+  // jalan dan gak ngunci siapa pun.
+  let userModules: string[] | null = null;
+  if (activeMembership.role !== "owner") {
+    const { data: modRow, error: modError } = await supabase
+      .from("company_users")
+      .select("modules")
+      .eq("user_id", user.id)
+      .eq("company_id", activeMembership.companies!.id)
+      .maybeSingle();
+    if (!modError) {
+      userModules = modRow?.modules ?? null;
+    }
+  }
+
   const activeCompany: ActiveCompanyContext = {
     company: activeMembership.companies!,
     role: activeMembership.role,
+    // Owner selalu akses penuh (modules null).
+    modules: userModules,
   };
 
   const companyOptions = validMemberships.map((m) => ({

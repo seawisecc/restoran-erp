@@ -19,21 +19,21 @@ export default async function TransaksiPage({
 
   const activeOutletId = searchParams.outlet || outlets?.[0]?.id || null;
 
-  const { data: tables } = activeOutletId
-    ? await supabase
-        .from("restaurant_tables")
-        .select("id, name, seats")
-        .eq("outlet_id", activeOutletId)
-        .order("name")
-    : { data: [] };
-
-  const { data: openOrders } = activeOutletId
-    ? await supabase
-        .from("orders")
-        .select("id, table_id, created_at")
-        .eq("status", "open")
-        .eq("outlet_id", activeOutletId)
-    : { data: [] };
+  // Meja & order aktif saling independen — ambil paralel biar cepat.
+  const [{ data: tables }, { data: openOrders }] = activeOutletId
+    ? await Promise.all([
+        supabase
+          .from("restaurant_tables")
+          .select("id, name, seats")
+          .eq("outlet_id", activeOutletId)
+          .order("name"),
+        supabase
+          .from("orders")
+          .select("id, table_id, created_at")
+          .eq("status", "open")
+          .eq("outlet_id", activeOutletId),
+      ])
+    : [{ data: [] }, { data: [] }];
 
   return (
     <TableGridClient
