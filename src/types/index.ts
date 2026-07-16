@@ -11,6 +11,11 @@ export interface Company {
   loyalty_earn_rate: number;
   loyalty_redeem_rate: number;
   created_at: string;
+  // Pengaturan biaya transaksi (pajak & service charge).
+  tax_enabled: boolean;
+  tax_rate: number;
+  service_enabled: boolean;
+  service_rate: number;
 }
 
 export interface CompanyUser {

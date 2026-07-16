@@ -43,7 +43,12 @@ export function OrderClient({
   const earnRate = company.loyalty_earn_rate;
 
   const [activeCat, setActiveCat] = useState<string | "all">("all");
-  const [isPending, startTransition] = useTransition();
+  // Transisi untuk tap item / ubah qty (tanpa isPending — tombol menu
+  // sengaja gak di-disable biar bisa tap cepat berturut-turut).
+  const [, startTransition] = useTransition();
+  // Transisi khusus untuk proses bayar — DIPISAH dari tap item, supaya
+  // tombol Bayar gak ke-disable gara-gara ada penulisan item di belakang.
+  const [payPending, startPayTransition] = useTransition();
 
   // ===== Keranjang optimistic =====
   // `cart` adalah sumber tampilan langsung: tiap tap menu / ubah qty
@@ -144,10 +149,15 @@ export function OrderClient({
 
   // Total dihitung dari keranjang optimistic (bukan dari order di
   // server), supaya angka langsung ikut berubah tiap tap tanpa nunggu
-  // server recalc.
+  // server recalc. Rate pajak & service ikut pengaturan company.
+  const taxRate = company.tax_enabled ? Number(company.tax_rate) : 0;
+  const serviceRate = company.service_enabled
+    ? Number(company.service_rate)
+    : 0;
   const subtotal = cart.reduce((s, it) => s + it.price * it.qty, 0);
-  const tax = Math.round(subtotal * 0.1);
-  const total = subtotal + tax;
+  const service = Math.round((subtotal * serviceRate) / 100);
+  const tax = Math.round(((subtotal + service) * taxRate) / 100);
+  const total = subtotal + service + tax;
 
   // Poin yang bisa dipakai dibatasi biar diskonnya gak lebih gede
   // dari total belanja.
@@ -161,7 +171,7 @@ export function OrderClient({
   function handlePay() {
     if (cart.length === 0) return;
     if (!confirm(`Konfirmasi pembayaran ${rupiah(finalTotal)}?`)) return;
-    startTransition(() => {
+    startPayTransition(() => {
       payOrder(order.id, {
         phone: phone.trim() || undefined,
         redeemPoints: redeemChecked ? usablePoints : 0,
@@ -343,10 +353,18 @@ export function OrderClient({
             <span>Subtotal</span>
             <span>{rupiah(subtotal)}</span>
           </div>
-          <div className="mb-1 flex justify-between text-sm text-ink-muted">
-            <span>Pajak (10%)</span>
-            <span>{rupiah(tax)}</span>
-          </div>
+          {serviceRate > 0 && (
+            <div className="mb-1 flex justify-between text-sm text-ink-muted">
+              <span>Service ({serviceRate}%)</span>
+              <span>{rupiah(service)}</span>
+            </div>
+          )}
+          {taxRate > 0 && (
+            <div className="mb-1 flex justify-between text-sm text-ink-muted">
+              <span>Pajak ({taxRate}%)</span>
+              <span>{rupiah(tax)}</span>
+            </div>
+          )}
           {discountAmount > 0 && (
             <div className="mb-1 flex justify-between text-sm text-accent-success">
               <span>Diskon Poin</span>
@@ -359,10 +377,10 @@ export function OrderClient({
           </div>
           <button
             onClick={handlePay}
-            disabled={isPending || cart.length === 0}
+            disabled={payPending || cart.length === 0}
             className="w-full rounded-xl bg-accent py-3.5 text-sm font-bold text-white disabled:opacity-50"
           >
-            Bayar
+            {payPending ? "Memproses..." : "Bayar"}
           </button>
         </div>
       </aside>

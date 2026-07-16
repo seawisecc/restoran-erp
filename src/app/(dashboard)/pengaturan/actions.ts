@@ -46,6 +46,40 @@ export async function updateCompanyProfile(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+// ===================== PAJAK & SERVICE =====================
+
+export async function updateChargeSettings(formData: FormData) {
+  const companyId = await getActiveCompanyId();
+  await assertOwner(companyId);
+
+  const taxEnabled = formData.get("tax_enabled") === "on";
+  const serviceEnabled = formData.get("service_enabled") === "on";
+  const taxRate = Number(formData.get("tax_rate"));
+  const serviceRate = Number(formData.get("service_rate"));
+
+  if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) {
+    throw new Error("Rate pajak harus 0–100%.");
+  }
+  if (!Number.isFinite(serviceRate) || serviceRate < 0 || serviceRate > 100) {
+    throw new Error("Rate service harus 0–100%.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("companies")
+    .update({
+      tax_enabled: taxEnabled,
+      tax_rate: taxRate,
+      service_enabled: serviceEnabled,
+      service_rate: serviceRate,
+    })
+    .eq("id", companyId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/pengaturan");
+  revalidatePath("/transaksi");
+}
+
 // ===================== MANAJEMEN PENGGUNA =====================
 
 const VALID_ROLES = ["owner", "manager", "kasir", "staff"] as const;

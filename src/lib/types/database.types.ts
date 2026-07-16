@@ -22,9 +22,13 @@ export type Database = {
           loyalty_earn_rate: number
           loyalty_redeem_rate: number
           name: string
+          service_enabled: boolean
+          service_rate: number
           slug: string
           status: string
           subscription_expires_at: string | null
+          tax_enabled: boolean
+          tax_rate: number
         }
         Insert: {
           address?: string | null
@@ -33,9 +37,13 @@ export type Database = {
           loyalty_earn_rate?: number
           loyalty_redeem_rate?: number
           name: string
+          service_enabled?: boolean
+          service_rate?: number
           slug: string
           status?: string
           subscription_expires_at?: string | null
+          tax_enabled?: boolean
+          tax_rate?: number
         }
         Update: {
           address?: string | null
@@ -44,9 +52,13 @@ export type Database = {
           loyalty_earn_rate?: number
           loyalty_redeem_rate?: number
           name?: string
+          service_enabled?: boolean
+          service_rate?: number
           slug?: string
           status?: string
           subscription_expires_at?: string | null
+          tax_enabled?: boolean
+          tax_rate?: number
         }
         Relationships: []
       }
@@ -307,6 +319,7 @@ export type Database = {
           paid_at: string | null
           points_earned: number
           points_redeemed: number
+          service: number
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number
           table_id: string | null
@@ -323,6 +336,7 @@ export type Database = {
           paid_at?: string | null
           points_earned?: number
           points_redeemed?: number
+          service?: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
           table_id?: string | null
@@ -339,6 +353,7 @@ export type Database = {
           paid_at?: string | null
           points_earned?: number
           points_redeemed?: number
+          service?: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
           table_id?: string | null

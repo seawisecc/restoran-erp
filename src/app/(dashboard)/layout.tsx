@@ -75,8 +75,29 @@ export default async function DashboardLayout({
     }
   }
 
+  // Setting pajak & service diambil DEFENSIF juga: kalau kolom belum
+  // ada (migrasi 0010 belum jalan), pakai default lama (pajak 10%,
+  // tanpa service) supaya transaksi tetap jalan normal.
+  const charge = {
+    tax_enabled: true,
+    tax_rate: 10,
+    service_enabled: false,
+    service_rate: 0,
+  };
+  const { data: chargeRow, error: chargeError } = await supabase
+    .from("companies")
+    .select("tax_enabled, tax_rate, service_enabled, service_rate")
+    .eq("id", activeMembership.companies!.id)
+    .maybeSingle();
+  if (!chargeError && chargeRow) {
+    charge.tax_enabled = chargeRow.tax_enabled ?? true;
+    charge.tax_rate = Number(chargeRow.tax_rate ?? 10);
+    charge.service_enabled = chargeRow.service_enabled ?? false;
+    charge.service_rate = Number(chargeRow.service_rate ?? 0);
+  }
+
   const activeCompany: ActiveCompanyContext = {
-    company: activeMembership.companies!,
+    company: { ...activeMembership.companies!, ...charge },
     role: activeMembership.role,
     // Owner selalu akses penuh (modules null).
     modules: userModules,

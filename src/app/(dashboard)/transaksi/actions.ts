@@ -94,11 +94,11 @@ export async function addOrderItem(
     lineQty = inserted?.qty ?? 1;
   }
 
-  await recalculateOrderTotals(orderId);
-  revalidatePath(`/transaksi/${orderId}`);
-
-  // Dikembalikan supaya client bisa mengganti id sementara (optimistic)
-  // dengan id baris asli dari database.
+  // CATATAN PERFORMA: sengaja TIDAK revalidatePath / recalcTotals di
+  // sini. Client sudah pegang state keranjang optimistik & hitung total
+  // sendiri, jadi tiap tap cukup 1 write ke DB (cepat). Total final
+  // dihitung ulang secara otoritatif di payOrder. Ini yang bikin tombol
+  // Bayar gak lagi "nunggu" beberapa detik tiap nambah item.
   return { id: lineId, qty: lineQty };
 }
 
@@ -115,29 +115,8 @@ export async function updateOrderItemQty(
     await supabase.from("order_items").update({ qty: nextQty }).eq("id", itemId);
   }
 
-  await recalculateOrderTotals(orderId);
-  revalidatePath(`/transaksi/${orderId}`);
-}
-
-async function recalculateOrderTotals(orderId: string) {
-  const supabase = await createClient();
-
-  const { data: items } = await supabase
-    .from("order_items")
-    .select("price, qty")
-    .eq("order_id", orderId);
-
-  const subtotal = (items ?? []).reduce(
-    (sum: number, it: { price: number; qty: number }) => sum + it.price * it.qty,
-    0,
-  );
-  const tax = Math.round(subtotal * 0.1);
-  const total = subtotal + tax;
-
-  await supabase
-    .from("orders")
-    .update({ subtotal, tax, total })
-    .eq("id", orderId);
+  // Sama seperti addOrderItem: tanpa revalidate/recalc demi kecepatan.
+  // Total otoritatif dihitung ulang saat payOrder.
 }
 
 /**
@@ -170,15 +149,50 @@ export async function payOrder(
 
   const { data: order } = await supabase
     .from("orders")
-    .select("company_id, total")
+    .select("company_id")
     .eq("id", orderId)
     .maybeSingle();
   if (!order) throw new Error("Order tidak ditemukan.");
 
+  // Total dihitung ULANG di sini (server) dari order_items — karena
+  // add/qty sengaja gak nyimpen total tiap tap (demi kecepatan). Ini
+  // juga jadi sumber kebenaran biar gak bisa dimanipulasi dari client.
+  const { data: orderItems } = await supabase
+    .from("order_items")
+    .select("price, qty")
+    .eq("order_id", orderId);
+  const subtotal = (orderItems ?? []).reduce(
+    (s: number, it: { price: number; qty: number }) => s + it.price * it.qty,
+    0,
+  );
+
+  // Setting pajak & service diambil DEFENSIF: kalau kolom belum ada
+  // (migrasi 0010 belum jalan), default = pajak 10%, tanpa service.
+  let taxEnabled = true;
+  let taxRate = 10;
+  let serviceEnabled = false;
+  let serviceRate = 0;
+  const { data: chargeRow, error: chargeErr } = await supabase
+    .from("companies")
+    .select("tax_enabled, tax_rate, service_enabled, service_rate")
+    .eq("id", order.company_id)
+    .maybeSingle();
+  if (!chargeErr && chargeRow) {
+    taxEnabled = chargeRow.tax_enabled ?? true;
+    taxRate = Number(chargeRow.tax_rate ?? 10);
+    serviceEnabled = chargeRow.service_enabled ?? false;
+    serviceRate = Number(chargeRow.service_rate ?? 0);
+  }
+  const service = serviceEnabled
+    ? Math.round((subtotal * serviceRate) / 100)
+    : 0;
+  const tax = taxEnabled
+    ? Math.round(((subtotal + service) * taxRate) / 100)
+    : 0;
+  const grossTotal = subtotal + service + tax;
+
   // Rate loyalty diambil dari pengaturan company (bisa diubah lewat
-  // halaman Pengaturan), bukan angka tetap di kode — dan WAJIB
-  // di-fetch dari database di sini (server), bukan dipercaya dari
-  // input client, biar gak bisa dimanipulasi.
+  // halaman Pengaturan), bukan angka tetap di kode.
   const { data: companyRates } = await supabase
     .from("companies")
     .select("loyalty_earn_rate, loyalty_redeem_rate")
@@ -192,7 +206,7 @@ export async function payOrder(
   let pointsEarned = 0;
   let pointsRedeemed = 0;
   let discountAmount = 0;
-  let finalTotal = Number(order.total);
+  let finalTotal = grossTotal;
 
   const phone = loyalty?.phone?.trim();
 
@@ -241,11 +255,20 @@ export async function payOrder(
       discount_amount: discountAmount,
       points_earned: pointsEarned,
       points_redeemed: pointsRedeemed,
+      subtotal,
+      tax,
       total: finalTotal,
     })
     .eq("id", orderId);
 
   if (error) throw new Error(error.message);
+
+  // Simpan service charge secara best-effort: kalau kolom `service`
+  // belum ada (migrasi 0010 belum dijalankan) error-nya diabaikan
+  // supaya proses bayar tetap sukses.
+  if (service > 0) {
+    await supabase.from("orders").update({ service }).eq("id", orderId);
+  }
 
   revalidatePath("/transaksi");
   redirect("/transaksi");

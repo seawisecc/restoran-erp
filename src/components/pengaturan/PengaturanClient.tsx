@@ -8,6 +8,7 @@ import {
   Pencil,
   Plus,
   QrCode,
+  Receipt,
   Store,
   Trash2,
   Users,
@@ -17,6 +18,7 @@ import {
 import {
   deleteTable,
   toggleOutletActive,
+  updateChargeSettings,
   updateCompanyProfile,
   updateLoyaltySettings,
 } from "@/app/(dashboard)/pengaturan/actions";
@@ -40,7 +42,13 @@ type TableRow = {
 };
 type CompanyProfile = { name: string; address: string | null };
 
-type SectionKey = "profil" | "pengguna" | "outlet" | "meja" | "loyalty";
+type SectionKey =
+  | "profil"
+  | "pengguna"
+  | "biaya"
+  | "outlet"
+  | "meja"
+  | "loyalty";
 
 export function PengaturanClient({
   outlets,
@@ -67,6 +75,8 @@ export function PengaturanClient({
   const [profileError, setProfileError] = useState<string | null>(null);
   const [loyaltyError, setLoyaltyError] = useState<string | null>(null);
   const [loyaltySaved, setLoyaltySaved] = useState(false);
+  const [chargeSaved, setChargeSaved] = useState(false);
+  const [chargeError, setChargeError] = useState<string | null>(null);
 
   function handleToggleOutlet(id: string, current: boolean) {
     startTransition(() => {
@@ -105,6 +115,24 @@ export function PengaturanClient({
       } catch (err) {
         setProfileError(
           err instanceof Error ? err.message : "Gagal menyimpan profil.",
+        );
+      }
+    });
+  }
+
+  function handleSaveCharge(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setChargeError(null);
+    setChargeSaved(false);
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      try {
+        await updateChargeSettings(formData);
+        setChargeSaved(true);
+        setTimeout(() => setChargeSaved(false), 2500);
+      } catch (err) {
+        setChargeError(
+          err instanceof Error ? err.message : "Gagal menyimpan pengaturan.",
         );
       }
     });
@@ -153,6 +181,7 @@ export function PengaturanClient({
   }[] = [
     { key: "profil", label: "Profil Resto", desc: "Nama & alamat restoran", icon: Store, show: true },
     { key: "pengguna", label: "Manajemen Pengguna", desc: "Akses pengguna, anggota tim", icon: Users, show: isOwner },
+    { key: "biaya", label: "Pajak & Service", desc: "Biaya di tiap transaksi", icon: Receipt, show: true },
     { key: "outlet", label: "Outlet", desc: "Cabang & lokasi", icon: Building2, show: true },
     { key: "meja", label: "Meja", desc: "Denah & QR meja", icon: UtensilsCrossed, show: true },
     { key: "loyalty", label: "Loyalty", desc: "Konversi poin pelanggan", icon: Gift, show: true },
@@ -262,6 +291,100 @@ export function PengaturanClient({
           )}
 
           {section === "pengguna" && isOwner && <UserManagement team={team} />}
+
+          {section === "biaya" && (
+            <div className="card max-w-md p-6">
+              <h3 className="mb-1 text-base font-bold text-ink">
+                Pajak & Service Charge
+              </h3>
+              <p className="mb-5 text-xs text-ink-muted">
+                Atur biaya yang otomatis ditambahkan di tiap transaksi. Matikan
+                kalau restoran Anda tidak memungutnya.
+              </p>
+              <form onSubmit={handleSaveCharge} className="flex flex-col gap-5">
+                {/* Pajak */}
+                <div className="rounded-xl border border-surface-border p-4">
+                  <label className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-ink">
+                      Pajak (PB1 / PPN)
+                    </span>
+                    <input
+                      type="checkbox"
+                      name="tax_enabled"
+                      defaultChecked={activeCompany.tax_enabled}
+                      disabled={!isOwner}
+                      className="h-4 w-4"
+                    />
+                  </label>
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      type="number"
+                      name="tax_rate"
+                      min={0}
+                      max={100}
+                      step="0.1"
+                      defaultValue={activeCompany.tax_rate}
+                      disabled={!isOwner}
+                      className="w-24 rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent disabled:bg-surface"
+                    />
+                    <span className="text-sm text-ink-muted">% dari subtotal</span>
+                  </div>
+                </div>
+
+                {/* Service */}
+                <div className="rounded-xl border border-surface-border p-4">
+                  <label className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-ink">
+                      Service Charge
+                    </span>
+                    <input
+                      type="checkbox"
+                      name="service_enabled"
+                      defaultChecked={activeCompany.service_enabled}
+                      disabled={!isOwner}
+                      className="h-4 w-4"
+                    />
+                  </label>
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      type="number"
+                      name="service_rate"
+                      min={0}
+                      max={100}
+                      step="0.1"
+                      defaultValue={activeCompany.service_rate}
+                      disabled={!isOwner}
+                      className="w-24 rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent disabled:bg-surface"
+                    />
+                    <span className="text-sm text-ink-muted">% dari subtotal</span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-ink-muted">
+                  Urutan hitung: pajak dikenakan atas (subtotal + service).
+                </p>
+
+                {chargeError && (
+                  <p className="text-sm text-accent-danger">{chargeError}</p>
+                )}
+                {chargeSaved && (
+                  <p className="text-sm text-accent-success">
+                    Pengaturan biaya tersimpan.
+                  </p>
+                )}
+
+                {isOwner ? (
+                  <button type="submit" disabled={isPending} className="btn-primary">
+                    {isPending ? "Menyimpan..." : "Simpan Pengaturan"}
+                  </button>
+                ) : (
+                  <p className="text-xs text-ink-muted">
+                    Hanya pemilik yang bisa mengubah pengaturan ini.
+                  </p>
+                )}
+              </form>
+            </div>
+          )}
 
           {section === "outlet" && (
             <div>
