@@ -1,19 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveCompanyId } from "@/lib/get-active-company";
 
 /**
- * Dipanggil pas kasir klik meja. Kalau meja itu udah ada order yang
- * masih 'open', langsung dipakai lagi (biar gak dobel order per meja).
- * Kalau belum ada, bikin order baru.
- *
- * Penting: outlet_id order diambil dari meja itu sendiri (bukan
- * ditebak/diasumsikan), supaya benar walau company punya banyak outlet.
+ * Versi SPA dari openOrCreateOrder: TIDAK redirect, tapi MENGEMBALIKAN
+ * orderId + daftar item yang sudah ada. Dipanggil pas kasir klik meja
+ * di POS SPA — hasilnya dipakai buat langsung nampilin layar order
+ * tanpa pindah halaman.
  */
-export async function openOrCreateOrder(tableId: string) {
+export async function openTableOrder(tableId: string) {
   const supabase = await createClient();
   const companyId = await getActiveCompanyId();
 
@@ -32,25 +29,37 @@ export async function openOrCreateOrder(tableId: string) {
     .limit(1)
     .maybeSingle();
 
-  if (existing) {
-    redirect(`/transaksi/${existing.id}`);
+  let orderId = existing?.id;
+  let createdAt = new Date().toISOString();
+
+  if (!orderId) {
+    const { data: created, error } = await supabase
+      .from("orders")
+      .insert({
+        company_id: companyId,
+        outlet_id: table.outlet_id,
+        table_id: tableId,
+        status: "open",
+      })
+      .select("id, created_at")
+      .single();
+    if (error) throw new Error(error.message);
+    orderId = created.id;
+    createdAt = created.created_at;
   }
 
-  const { data: created, error } = await supabase
-    .from("orders")
-    .insert({
-      company_id: companyId,
-      outlet_id: table.outlet_id,
-      table_id: tableId,
-      status: "open",
-    })
-    .select("id")
-    .single();
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("id, menu_item_id, name, price, qty")
+    .eq("order_id", orderId)
+    .order("created_at");
 
-  if (error) throw new Error(error.message);
-
-  revalidatePath("/transaksi");
-  redirect(`/transaksi/${created.id}`);
+  return {
+    orderId,
+    createdAt,
+    isNew: !existing,
+    items: items ?? [],
+  };
 }
 
 export async function addOrderItem(
@@ -270,6 +279,9 @@ export async function payOrder(
     await supabase.from("orders").update({ service }).eq("id", orderId);
   }
 
+  // Tetap revalidate biar render server berikutnya fresh, tapi TIDAK
+  // redirect — POS sekarang berupa SPA yang menangani UI setelah bayar
+  // lewat state (tanpa navigasi).
   revalidatePath("/transaksi");
-  redirect("/transaksi");
+  return { success: true as const };
 }

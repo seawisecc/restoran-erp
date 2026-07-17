@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getActiveCompanyId } from "@/lib/get-active-company";
-import { TableGridClient } from "@/components/transaksi/TableGridClient";
+import { PosClient } from "@/components/transaksi/PosClient";
 
 export default async function TransaksiPage({
   searchParams,
@@ -10,37 +10,55 @@ export default async function TransaksiPage({
   const supabase = await createClient();
   const companyId = await getActiveCompanyId();
 
-  const { data: outlets } = await supabase
-    .from("outlets")
-    .select("id, name")
-    .eq("company_id", companyId)
-    .eq("is_active", true)
-    .order("name");
+  // Muat SEMUA data yang dibutuhkan POS sekali di sini: outlet, meja,
+  // order terbuka, kategori & menu. Menu tidak akan di-fetch lagi tiap
+  // buka meja — itu kunci "sat set"-nya (SPA, tanpa navigasi/refetch).
+  const [
+    { data: outlets },
+    { data: tables },
+    { data: openOrders },
+    { data: categories },
+    { data: menuItems },
+  ] = await Promise.all([
+    supabase
+      .from("outlets")
+      .select("id, name")
+      .eq("company_id", companyId)
+      .eq("is_active", true)
+      .order("name"),
+    supabase
+      .from("restaurant_tables")
+      .select("id, name, seats, outlet_id")
+      .eq("company_id", companyId)
+      .order("name"),
+    supabase
+      .from("orders")
+      .select("id, table_id, created_at")
+      .eq("company_id", companyId)
+      .eq("status", "open"),
+    supabase
+      .from("menu_categories")
+      .select("id, name, sort_order")
+      .eq("company_id", companyId)
+      .order("sort_order"),
+    supabase
+      .from("menu_items")
+      .select("id, name, category_id, price")
+      .eq("company_id", companyId)
+      .eq("is_active", true)
+      .order("name"),
+  ]);
 
-  const activeOutletId = searchParams.outlet || outlets?.[0]?.id || null;
-
-  // Meja & order aktif saling independen — ambil paralel biar cepat.
-  const [{ data: tables }, { data: openOrders }] = activeOutletId
-    ? await Promise.all([
-        supabase
-          .from("restaurant_tables")
-          .select("id, name, seats")
-          .eq("outlet_id", activeOutletId)
-          .order("name"),
-        supabase
-          .from("orders")
-          .select("id, table_id, created_at")
-          .eq("status", "open")
-          .eq("outlet_id", activeOutletId),
-      ])
-    : [{ data: [] }, { data: [] }];
+  const initialOutletId = searchParams.outlet || outlets?.[0]?.id || null;
 
   return (
-    <TableGridClient
+    <PosClient
+      outlets={outlets ?? []}
       tables={tables ?? []}
       openOrders={openOrders ?? []}
-      outlets={outlets ?? []}
-      activeOutletId={activeOutletId}
+      categories={categories ?? []}
+      menuItems={menuItems ?? []}
+      initialOutletId={initialOutletId}
     />
   );
 }
