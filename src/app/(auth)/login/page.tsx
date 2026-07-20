@@ -2,7 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ChefHat, UtensilsCrossed } from "lucide-react";
+import Link from "next/link";
+import { ChefHat, Sparkles, UtensilsCrossed } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { signUpAndCreateCompany } from "../signup/actions";
 
@@ -136,6 +137,14 @@ export default function Auth() {
             Daftar restoran baru
           </button>
         </p>
+
+        <Link
+          href="/kenapa"
+          className="mt-5 flex items-center justify-center gap-1.5 rounded-xl border border-[#e2ddd3] bg-white/70 px-4 py-2.5 text-sm font-medium text-[#1c2620] transition-colors hover:border-[#1e3a2c]/40 hover:bg-white"
+        >
+          <Sparkles size={15} className="text-[#c2632f]" />
+          Kenapa harus pakai aplikasi ini?
+        </Link>
       </div>
 
       {/* ── Signup form ── */}

@@ -111,7 +111,7 @@ export function RiwayatClient({ orders }: { orders: OrderRow[] }) {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-ink">
-                    {o.restaurant_tables?.name ?? "Meja"}
+                    {o.restaurant_tables?.name ?? "Take Away"}
                   </p>
                   <p className="text-xs text-ink-muted">
                     {formatDateTime(o.paid_at)} &middot;{" "}

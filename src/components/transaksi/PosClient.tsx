@@ -2,11 +2,22 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, Gift, History, Minus, Plus } from "lucide-react";
+import {
+  ChevronLeft,
+  Gift,
+  History,
+  Minus,
+  Plus,
+  Printer,
+  ShoppingBag,
+  X,
+} from "lucide-react";
 import {
   addOrderItem,
   getCustomerPoints,
+  openExistingOrder,
   openTableOrder,
+  openTakeawayOrder,
   payOrder,
   updateOrderItemQty,
 } from "@/app/(dashboard)/transaksi/actions";
@@ -17,6 +28,24 @@ type OpenOrder = {
   id: string;
   table_id: string | null;
   created_at: string;
+  outlet_id: string;
+};
+type ActiveOrder = {
+  id: string;
+  label: string;
+  isTakeaway: boolean;
+};
+type Receipt = {
+  label: string;
+  items: OrderItem[];
+  subtotal: number;
+  service: number;
+  tax: number;
+  discountAmount: number;
+  total: number;
+  pointsEarned: number;
+  pointsRedeemed: number;
+  paidAt: string;
 };
 type Outlet = { id: string; name: string };
 type Category = { id: string; name: string; sort_order: number };
@@ -37,6 +66,55 @@ type OrderItem = {
 function rupiah(n: number) {
   return "Rp " + n.toLocaleString("id-ID");
 }
+/**
+ * CSS cetak yang menyesuaikan ukuran kertas printer nota.
+ * Aturan dasar (menyembunyikan elemen selain #struk-print) sudah ada di
+ * globals.css — di sini kita atur lebar kertas, font, dan memastikan
+ * struk tercetak penuh (bukan terpotong scroll modal) serta hitam pekat.
+ */
+function printCss(paper: string) {
+  const isA4 = paper === "a4";
+  const width = paper === "58mm" ? "58mm" : "80mm";
+
+  const page = isA4
+    ? "@page { size: A4; margin: 14mm; }"
+    : `@page { size: ${width} auto; margin: 0; }`;
+
+  const box = isA4
+    ? "width: 100% !important; max-width: 150mm; font-size: 12px; padding: 0 !important;"
+    : `width: ${width} !important; font-size: ${
+        paper === "58mm" ? "9.5px" : "11px"
+      }; padding: ${paper === "58mm" ? "2mm" : "3mm"} !important;`;
+
+  return `
+@media print {
+  ${page}
+  html, body { background: #fff !important; }
+  /* Struk harus tercetak utuh — batas tinggi & scroll modal dilepas. */
+  #struk-print {
+    ${box}
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  /* Printer thermal hanya hitam-putih: paksa teks pekat, buang dekorasi. */
+  #struk-print, #struk-print * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
+`;
+}
+
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 function timeAgo(iso: string) {
   const mins = Math.max(
     1,
@@ -53,6 +131,7 @@ export function PosClient({
   categories,
   menuItems,
   initialOutletId,
+  receiptPaper,
 }: {
   outlets: Outlet[];
   tables: Table[];
@@ -60,6 +139,7 @@ export function PosClient({
   categories: Category[];
   menuItems: MenuItem[];
   initialOutletId: string | null;
+  receiptPaper: string;
 }) {
   const { company } = useCompany();
   const redeemRate = company.loyalty_redeem_rate;
@@ -74,11 +154,8 @@ export function PosClient({
   const [openState, setOpenState] = useState<OpenOrder[]>(openOrders);
 
   // ===== Order aktif =====
-  const [order, setOrder] = useState<{
-    id: string;
-    tableId: string;
-    tableName: string;
-  } | null>(null);
+  const [order, setOrder] = useState<ActiveOrder | null>(null);
+  const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
   const [activeCat, setActiveCat] = useState<string | "all">("all");
@@ -128,26 +205,78 @@ export function PosClient({
     return menuItems.filter((m) => m.category_id === activeCat);
   }, [menuItems, activeCat]);
 
-  // ===== Buka meja (tanpa navigasi) =====
-  function openTable(table: Table) {
-    setOrder({ id: "", tableId: table.id, tableName: table.name });
+  // ===== Buka order (tanpa navigasi) =====
+  function enterOrderView(label: string, isTakeaway: boolean) {
+    setOrder({ id: "", label, isTakeaway });
     setCart([]);
     resetLoyalty();
     setActiveCat("all");
     setOrderLoading(true);
     setView("order");
+  }
 
+  function openTable(table: Table) {
+    enterOrderView(table.name, false);
     startTransition(async () => {
       try {
         const res = await openTableOrder(table.id);
-        setOrder({ id: res.orderId, tableId: table.id, tableName: table.name });
+        setOrder({ id: res.orderId, label: table.name, isTakeaway: false });
         setCart(res.items);
         if (res.isNew) {
           setOpenState((prev) => [
             ...prev,
-            { id: res.orderId, table_id: table.id, created_at: res.createdAt },
+            {
+              id: res.orderId,
+              table_id: table.id,
+              created_at: res.createdAt,
+              outlet_id: table.outlet_id,
+            },
           ]);
         }
+      } catch {
+        setView("grid");
+        setOrder(null);
+      } finally {
+        setOrderLoading(false);
+      }
+    });
+  }
+
+  /** Pesanan bungkus/bawa pulang — order tanpa meja. */
+  function openTakeaway() {
+    if (!activeOutletId) return;
+    enterOrderView("Take Away", true);
+    startTransition(async () => {
+      try {
+        const res = await openTakeawayOrder(activeOutletId);
+        setOrder({ id: res.orderId, label: "Take Away", isTakeaway: true });
+        setCart([]);
+        setOpenState((prev) => [
+          ...prev,
+          {
+            id: res.orderId,
+            table_id: null,
+            created_at: res.createdAt,
+            outlet_id: activeOutletId,
+          },
+        ]);
+      } catch {
+        setView("grid");
+        setOrder(null);
+      } finally {
+        setOrderLoading(false);
+      }
+    });
+  }
+
+  /** Lanjutkan pesanan take away yang masih terbuka. */
+  function resumeTakeaway(openOrder: OpenOrder, label: string) {
+    enterOrderView(label, true);
+    startTransition(async () => {
+      try {
+        const res = await openExistingOrder(openOrder.id);
+        setOrder({ id: res.orderId, label, isTakeaway: true });
+        setCart(res.items);
       } catch {
         setView("grid");
         setOrder(null);
@@ -239,18 +368,167 @@ export function PosClient({
     if (cart.length === 0 || !order?.id) return;
     if (!confirm(`Konfirmasi pembayaran ${rupiah(finalTotal)}?`)) return;
     const currentOrderId = order.id;
+    const label = order.label;
+    const itemsSnapshot = cart.map((c) => ({ ...c }));
+
     startPayTransition(async () => {
       // Pastikan semua penulisan item selesai dulu sebelum server
       // menghitung ulang total final.
       await writeQueue.current;
-      await payOrder(currentOrderId, {
+      const res = await payOrder(currentOrderId, {
         phone: phone.trim() || undefined,
         redeemPoints: redeemChecked ? usablePoints : 0,
       });
       setOpenState((prev) => prev.filter((o) => o.id !== currentOrderId));
+      // Angka nota diambil dari hasil hitung server (bukan client),
+      // supaya struk persis sama dengan yang tersimpan.
+      setReceipt({
+        label,
+        items: itemsSnapshot,
+        subtotal: res.subtotal,
+        service: res.service,
+        tax: res.tax,
+        discountAmount: res.discountAmount,
+        total: res.total,
+        pointsEarned: res.pointsEarned,
+        pointsRedeemed: res.pointsRedeemed,
+        paidAt: res.paidAt,
+      });
       backToGrid();
     });
   }
+
+  // ===== Take away yang masih terbuka di outlet aktif =====
+  const takeaways = useMemo(
+    () =>
+      openState
+        .filter((o) => o.table_id === null && o.outlet_id === activeOutletId)
+        .sort((a, b) => a.created_at.localeCompare(b.created_at)),
+    [openState, activeOutletId],
+  );
+
+  const outletName = outlets.find((o) => o.id === activeOutletId)?.name ?? "";
+
+  // ===== Nota =====
+  const receiptModal = receipt ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <style dangerouslySetInnerHTML={{ __html: printCss(receiptPaper) }} />
+      <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-surface-border px-4 py-3">
+          <p className="text-sm font-bold text-ink">Pembayaran Berhasil</p>
+          <button
+            onClick={() => setReceipt(null)}
+            className="rounded-md p-1 text-ink-muted hover:text-ink"
+            aria-label="Tutup"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Bagian yang ikut tercetak (lihat aturan @media print) */}
+        <div
+          id="struk-print"
+          className="max-h-[65vh] overflow-y-auto bg-white px-6 py-5 text-[#1c2620]"
+        >
+          <div className="text-center">
+            <p className="text-base font-bold">{company.name}</p>
+            {outletName && (
+              <p className="text-xs text-ink-muted">{outletName}</p>
+            )}
+          </div>
+
+          <div className="my-3 border-t border-dashed border-surface-border" />
+
+          <div className="flex justify-between text-xs text-ink-muted">
+            <span className="font-semibold text-ink">{receipt.label}</span>
+            <span>{formatDateTime(receipt.paidAt)}</span>
+          </div>
+
+          <div className="my-3 border-t border-dashed border-surface-border" />
+
+          <div className="space-y-2">
+            {receipt.items.map((it) => (
+              <div key={it.id} className="flex justify-between gap-3 text-xs">
+                <div className="min-w-0">
+                  <p className="font-medium">{it.name}</p>
+                  <p className="text-ink-muted">
+                    {it.qty} × {rupiah(it.price)}
+                  </p>
+                </div>
+                <span className="shrink-0 font-semibold">
+                  {rupiah(it.price * it.qty)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="my-3 border-t border-dashed border-surface-border" />
+
+          <div className="space-y-1 text-xs">
+            <div className="flex justify-between text-ink-muted">
+              <span>Subtotal</span>
+              <span>{rupiah(receipt.subtotal)}</span>
+            </div>
+            {receipt.service > 0 && (
+              <div className="flex justify-between text-ink-muted">
+                <span>Service</span>
+                <span>{rupiah(receipt.service)}</span>
+              </div>
+            )}
+            {receipt.tax > 0 && (
+              <div className="flex justify-between text-ink-muted">
+                <span>Pajak</span>
+                <span>{rupiah(receipt.tax)}</span>
+              </div>
+            )}
+            {receipt.discountAmount > 0 && (
+              <div className="flex justify-between text-ink-muted">
+                <span>Diskon Poin</span>
+                <span>-{rupiah(receipt.discountAmount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-surface-border pt-1.5 text-sm font-bold">
+              <span>TOTAL</span>
+              <span>{rupiah(receipt.total)}</span>
+            </div>
+          </div>
+
+          {(receipt.pointsEarned > 0 || receipt.pointsRedeemed > 0) && (
+            <>
+              <div className="my-3 border-t border-dashed border-surface-border" />
+              <div className="space-y-0.5 text-[11px] text-ink-muted">
+                {receipt.pointsRedeemed > 0 && (
+                  <p>Poin dipakai: {receipt.pointsRedeemed}</p>
+                )}
+                {receipt.pointsEarned > 0 && (
+                  <p>Poin didapat: +{receipt.pointsEarned}</p>
+                )}
+              </div>
+            </>
+          )}
+
+          <p className="mt-4 text-center text-[11px] text-ink-muted">
+            Terima kasih atas kunjungan Anda.
+          </p>
+        </div>
+
+        <div className="flex gap-2 border-t border-surface-border p-4">
+          <button
+            onClick={() => setReceipt(null)}
+            className="flex-1 rounded-lg border border-surface-border py-2.5 text-sm font-semibold text-ink-muted hover:text-ink"
+          >
+            Selesai
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent py-2.5 text-sm font-semibold text-white hover:bg-accent-hover"
+          >
+            <Printer size={15} /> Cetak Nota
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   // ============================ RENDER ============================
   if (view === "order") {
@@ -268,7 +546,7 @@ export function PosClient({
             </button>
             <h2 className="text-lg font-bold text-ink">Pilih Menu</h2>
             <span className="ml-auto rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-white">
-              {order?.tableName ?? "Meja"}
+              {order?.label ?? "Pesanan"}
             </span>
           </div>
 
@@ -329,7 +607,7 @@ export function PosClient({
         <aside className="flex w-full flex-col border-t border-surface-border bg-surface-card md:w-80 md:border-l md:border-t-0">
           <div className="p-4">
             <h3 className="text-base font-bold text-ink">
-              Pesanan &mdash; {order?.tableName ?? "Meja"}
+              Pesanan &mdash; {order?.label ?? "Pesanan"}
             </h3>
             <p className="text-xs text-ink-muted">
               {orderLoading ? "Menyiapkan..." : `${cart.length} item`}
@@ -519,6 +797,48 @@ export function PosClient({
         </div>
       )}
 
+      {/* ===== Take Away ===== */}
+      <div className="mb-6">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-ink">Take Away</h2>
+            <p className="text-xs text-ink-muted">
+              Pesanan bungkus, tanpa meja
+            </p>
+          </div>
+          <button
+            onClick={openTakeaway}
+            disabled={!activeOutletId}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+          >
+            <ShoppingBag size={14} /> Pesanan Baru
+          </button>
+        </div>
+
+        {takeaways.length > 0 && (
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
+            {takeaways.map((o, i) => (
+              <button
+                key={o.id}
+                onClick={() => resumeTakeaway(o, `Take Away #${i + 1}`)}
+                className="flex items-center gap-2.5 rounded-xl border border-accent-peach/40 bg-accent-peachBg px-3 py-2.5 text-left transition-colors hover:border-accent-peach active:scale-[0.98]"
+              >
+                <ShoppingBag size={16} className="shrink-0 text-accent-peach" />
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-bold text-ink">
+                    Take Away #{i + 1}
+                  </p>
+                  <p className="text-[10px] text-ink-muted">
+                    {timeAgo(o.created_at)}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <h2 className="mb-3 text-sm font-bold text-ink">Meja</h2>
       <div className="grid grid-cols-3 gap-3.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
         {visibleTables.map((t) => {
           const openOrder = orderByTable.get(t.id);
@@ -549,6 +869,8 @@ export function PosClient({
             : "Belum ada meja di outlet ini. Tambahkan lewat menu Pengaturan."}
         </div>
       )}
+
+      {receiptModal}
     </div>
   );
 }

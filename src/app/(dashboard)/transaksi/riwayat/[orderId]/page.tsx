@@ -52,7 +52,7 @@ export default async function RiwayatDetailPage({
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-ink">
-            {order.restaurant_tables?.name ?? "Meja"}
+            {order.restaurant_tables?.name ?? "Take Away"}
           </h1>
           <p className="text-sm text-ink-muted">
             {order.paid_at ? formatDateTime(order.paid_at) : "-"}

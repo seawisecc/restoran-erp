@@ -80,6 +80,30 @@ export async function updateChargeSettings(formData: FormData) {
   revalidatePath("/transaksi");
 }
 
+// ===================== NOTA / PRINTER =====================
+
+const VALID_PAPERS = ["58mm", "80mm", "a4"] as const;
+
+export async function updateReceiptSettings(formData: FormData) {
+  const companyId = await getActiveCompanyId();
+  await assertOwner(companyId);
+
+  const paper = String(formData.get("receipt_paper") || "80mm");
+  if (!VALID_PAPERS.includes(paper as (typeof VALID_PAPERS)[number])) {
+    throw new Error("Ukuran kertas tidak valid.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("companies")
+    .update({ receipt_paper: paper })
+    .eq("id", companyId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/pengaturan");
+  revalidatePath("/transaksi");
+}
+
 // ===================== MANAJEMEN PENGGUNA =====================
 
 const VALID_ROLES = ["owner", "manager", "kasir", "staff"] as const;

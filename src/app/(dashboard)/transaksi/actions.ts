@@ -62,6 +62,68 @@ export async function openTableOrder(tableId: string) {
   };
 }
 
+/**
+ * Bikin order TAKE AWAY — order tanpa meja (table_id null). Dipakai
+ * buat pesanan bungkus/bawa pulang yang gak menempati meja.
+ */
+export async function openTakeawayOrder(outletId: string) {
+  const supabase = await createClient();
+  const companyId = await getActiveCompanyId();
+
+  if (!outletId) throw new Error("Outlet belum dipilih.");
+
+  const { data: created, error } = await supabase
+    .from("orders")
+    .insert({
+      company_id: companyId,
+      outlet_id: outletId,
+      table_id: null,
+      status: "open",
+    })
+    .select("id, created_at")
+    .single();
+  if (error) throw new Error(error.message);
+
+  return {
+    orderId: created.id,
+    createdAt: created.created_at,
+    items: [] as {
+      id: string;
+      menu_item_id: string | null;
+      name: string;
+      price: number;
+      qty: number;
+    }[],
+  };
+}
+
+/**
+ * Lanjutkan order yang sudah ada (dipakai buat melanjutkan pesanan
+ * take away yang masih terbuka).
+ */
+export async function openExistingOrder(orderId: string) {
+  const supabase = await createClient();
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id, created_at, status")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) throw new Error("Pesanan tidak ditemukan.");
+
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("id, menu_item_id, name, price, qty")
+    .eq("order_id", orderId)
+    .order("created_at");
+
+  return {
+    orderId: order.id,
+    createdAt: order.created_at,
+    items: items ?? [],
+  };
+}
+
 export async function addOrderItem(
   orderId: string,
   menuItem: { id: string; name: string; price: number },
@@ -255,11 +317,13 @@ export async function payOrder(
       .eq("id", customerId);
   }
 
+  const paidAt = new Date().toISOString();
+
   const { error } = await supabase
     .from("orders")
     .update({
       status: "paid",
-      paid_at: new Date().toISOString(),
+      paid_at: paidAt,
       customer_id: customerId,
       discount_amount: discountAmount,
       points_earned: pointsEarned,
@@ -283,5 +347,18 @@ export async function payOrder(
   // redirect — POS sekarang berupa SPA yang menangani UI setelah bayar
   // lewat state (tanpa navigasi).
   revalidatePath("/transaksi");
-  return { success: true as const };
+
+  // Angka-angka ini dikembalikan buat dicetak di nota — sumbernya
+  // hasil hitung server, jadi struk pasti sama dengan yang tersimpan.
+  return {
+    success: true as const,
+    subtotal,
+    service,
+    tax,
+    discountAmount,
+    total: finalTotal,
+    pointsEarned,
+    pointsRedeemed,
+    paidAt,
+  };
 }

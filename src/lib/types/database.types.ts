@@ -22,6 +22,7 @@ export type Database = {
           loyalty_earn_rate: number
           loyalty_redeem_rate: number
           name: string
+          receipt_paper: string
           service_enabled: boolean
           service_rate: number
           slug: string
@@ -37,6 +38,7 @@ export type Database = {
           loyalty_earn_rate?: number
           loyalty_redeem_rate?: number
           name: string
+          receipt_paper?: string
           service_enabled?: boolean
           service_rate?: number
           slug: string
@@ -52,6 +54,7 @@ export type Database = {
           loyalty_earn_rate?: number
           loyalty_redeem_rate?: number
           name?: string
+          receipt_paper?: string
           service_enabled?: boolean
           service_rate?: number
           slug?: string

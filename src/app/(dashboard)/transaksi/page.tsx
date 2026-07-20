@@ -19,6 +19,7 @@ export default async function TransaksiPage({
     { data: openOrders },
     { data: categories },
     { data: menuItems },
+    { data: paperRow, error: paperError },
   ] = await Promise.all([
     supabase
       .from("outlets")
@@ -33,7 +34,7 @@ export default async function TransaksiPage({
       .order("name"),
     supabase
       .from("orders")
-      .select("id, table_id, created_at")
+      .select("id, table_id, created_at, outlet_id")
       .eq("company_id", companyId)
       .eq("status", "open"),
     supabase
@@ -47,7 +48,16 @@ export default async function TransaksiPage({
       .eq("company_id", companyId)
       .eq("is_active", true)
       .order("name"),
+    // Defensif: kalau migrasi 0011 belum jalan, jatuh ke default 80mm.
+    supabase
+      .from("companies")
+      .select("receipt_paper")
+      .eq("id", companyId)
+      .maybeSingle(),
   ]);
+
+  const receiptPaper =
+    !paperError && paperRow?.receipt_paper ? paperRow.receipt_paper : "80mm";
 
   const initialOutletId = searchParams.outlet || outlets?.[0]?.id || null;
 
@@ -59,6 +69,7 @@ export default async function TransaksiPage({
       categories={categories ?? []}
       menuItems={menuItems ?? []}
       initialOutletId={initialOutletId}
+      receiptPaper={receiptPaper}
     />
   );
 }

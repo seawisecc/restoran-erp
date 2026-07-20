@@ -7,8 +7,12 @@ export default async function PengaturanPage() {
   const supabase = await createClient();
   const companyId = await getActiveCompanyId();
 
-  const [{ data: outlets }, { data: tables }, { data: company }] =
-    await Promise.all([
+  const [
+    { data: outlets },
+    { data: tables },
+    { data: company },
+    { data: paperRow, error: paperError },
+  ] = await Promise.all([
       supabase
         .from("outlets")
         .select("id, name, address, is_active")
@@ -24,7 +28,17 @@ export default async function PengaturanPage() {
         .select("name, address")
         .eq("id", companyId)
         .maybeSingle(),
+      // Query terpisah & defensif: kalau migrasi 0011 belum dijalankan,
+      // error-nya gak ikut menggagalkan query profil di atas.
+      supabase
+        .from("companies")
+        .select("receipt_paper")
+        .eq("id", companyId)
+        .maybeSingle(),
     ]);
+
+  const receiptPaper =
+    !paperError && paperRow?.receipt_paper ? paperRow.receipt_paper : "80mm";
 
   // Daftar anggota tim + email-nya (email diambil via Admin Auth API,
   // karena auth.users gak bisa di-query langsung dari schema public).
@@ -60,6 +74,7 @@ export default async function PengaturanPage() {
         address: company?.address ?? null,
       }}
       team={team}
+      receiptPaper={receiptPaper}
     />
   );
 }

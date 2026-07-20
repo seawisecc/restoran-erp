@@ -7,6 +7,7 @@ import {
   Gift,
   Pencil,
   Plus,
+  Printer,
   QrCode,
   Receipt,
   Store,
@@ -21,6 +22,7 @@ import {
   updateChargeSettings,
   updateCompanyProfile,
   updateLoyaltySettings,
+  updateReceiptSettings,
 } from "@/app/(dashboard)/pengaturan/actions";
 import { useCompany } from "@/components/providers/CompanyProvider";
 import { OutletFormModal } from "./OutletFormModal";
@@ -46,20 +48,37 @@ type SectionKey =
   | "profil"
   | "pengguna"
   | "biaya"
+  | "nota"
   | "outlet"
   | "meja"
   | "loyalty";
+
+const PAPER_OPTIONS = [
+  {
+    value: "80mm",
+    label: "Thermal 80mm",
+    desc: "Printer kasir thermal paling umum.",
+  },
+  {
+    value: "58mm",
+    label: "Thermal 58mm",
+    desc: "Printer thermal kecil / portable.",
+  },
+  { value: "a4", label: "A4 / Kertas biasa", desc: "Printer inkjet atau laser." },
+];
 
 export function PengaturanClient({
   outlets,
   tables,
   company,
   team,
+  receiptPaper,
 }: {
   outlets: Outlet[];
   tables: TableRow[];
   company: CompanyProfile;
   team: TeamMember[];
+  receiptPaper: string;
 }) {
   const { company: activeCompany, role } = useCompany();
   const isOwner = role === "owner";
@@ -77,6 +96,9 @@ export function PengaturanClient({
   const [loyaltySaved, setLoyaltySaved] = useState(false);
   const [chargeSaved, setChargeSaved] = useState(false);
   const [chargeError, setChargeError] = useState<string | null>(null);
+  const [paperSaved, setPaperSaved] = useState(false);
+  const [paperError, setPaperError] = useState<string | null>(null);
+  const [paper, setPaper] = useState(receiptPaper);
 
   function handleToggleOutlet(id: string, current: boolean) {
     startTransition(() => {
@@ -115,6 +137,24 @@ export function PengaturanClient({
       } catch (err) {
         setProfileError(
           err instanceof Error ? err.message : "Gagal menyimpan profil.",
+        );
+      }
+    });
+  }
+
+  function handleSavePaper(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPaperError(null);
+    setPaperSaved(false);
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      try {
+        await updateReceiptSettings(formData);
+        setPaperSaved(true);
+        setTimeout(() => setPaperSaved(false), 2500);
+      } catch (err) {
+        setPaperError(
+          err instanceof Error ? err.message : "Gagal menyimpan pengaturan.",
         );
       }
     });
@@ -182,6 +222,7 @@ export function PengaturanClient({
     { key: "profil", label: "Profil Resto", desc: "Nama & alamat restoran", icon: Store, show: true },
     { key: "pengguna", label: "Manajemen Pengguna", desc: "Akses pengguna, anggota tim", icon: Users, show: isOwner },
     { key: "biaya", label: "Pajak & Service", desc: "Biaya di tiap transaksi", icon: Receipt, show: true },
+    { key: "nota", label: "Nota & Printer", desc: "Ukuran kertas struk", icon: Printer, show: true },
     { key: "outlet", label: "Outlet", desc: "Cabang & lokasi", icon: Building2, show: true },
     { key: "meja", label: "Meja", desc: "Denah & QR meja", icon: UtensilsCrossed, show: true },
     { key: "loyalty", label: "Loyalty", desc: "Konversi poin pelanggan", icon: Gift, show: true },
@@ -370,6 +411,74 @@ export function PengaturanClient({
                 {chargeSaved && (
                   <p className="text-sm text-accent-success">
                     Pengaturan biaya tersimpan.
+                  </p>
+                )}
+
+                {isOwner ? (
+                  <button type="submit" disabled={isPending} className="btn-primary">
+                    {isPending ? "Menyimpan..." : "Simpan Pengaturan"}
+                  </button>
+                ) : (
+                  <p className="text-xs text-ink-muted">
+                    Hanya pemilik yang bisa mengubah pengaturan ini.
+                  </p>
+                )}
+              </form>
+            </div>
+          )}
+
+          {section === "nota" && (
+            <div className="card max-w-md p-6">
+              <h3 className="mb-1 text-base font-bold text-ink">
+                Nota &amp; Printer
+              </h3>
+              <p className="mb-5 text-xs text-ink-muted">
+                Pilih ukuran kertas printer struk. Layout nota otomatis
+                menyesuaikan saat dicetak.
+              </p>
+              <form onSubmit={handleSavePaper} className="flex flex-col gap-4">
+                <div className="space-y-2.5">
+                  {PAPER_OPTIONS.map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                        paper === opt.value
+                          ? "border-accent bg-surface"
+                          : "border-surface-border hover:border-accent/40"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="receipt_paper"
+                        value={opt.value}
+                        checked={paper === opt.value}
+                        onChange={() => setPaper(opt.value)}
+                        disabled={!isOwner}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-ink">
+                          {opt.label}
+                        </span>
+                        <span className="block text-xs text-ink-muted">
+                          {opt.desc}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
+                <p className="text-xs text-ink-muted">
+                  Catatan: pemotongan kertas otomatis dan buka laci uang perlu
+                  aplikasi pendukung di komputer kasir, tidak bisa dari browser.
+                </p>
+
+                {paperError && (
+                  <p className="text-sm text-accent-danger">{paperError}</p>
+                )}
+                {paperSaved && (
+                  <p className="text-sm text-accent-success">
+                    Pengaturan nota tersimpan.
                   </p>
                 )}
 

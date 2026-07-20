@@ -115,7 +115,7 @@ export function KdsClient({ initialOrders }: { initialOrders: Order[] }) {
               >
                 <div className="flex items-center justify-between bg-surface px-4 py-2.5">
                   <p className="text-sm font-bold text-ink">
-                    {order.restaurant_tables?.name ?? "Meja"}
+                    {order.restaurant_tables?.name ?? "Take Away"}
                   </p>
                   <p className="text-xs text-ink-muted">
                     {timeAgo(order.created_at)}
