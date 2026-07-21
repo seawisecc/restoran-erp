@@ -9,16 +9,26 @@ const inter = Inter({
 });
 
 /**
- * Base URL untuk link preview. Di Vercel otomatis kebaca dari
- * VERCEL_URL. Kalau sudah pakai domain sendiri, set
- * NEXT_PUBLIC_SITE_URL di environment variable biar preview-nya
- * memakai domain itu.
+ * Base URL untuk link preview.
+ *
+ * PENTING: jangan pakai VERCEL_URL sebagai pilihan utama. VERCEL_URL
+ * berisi URL unik per-deployment (mis. restoran-abc123-seawise.vercel.app)
+ * yang di akun tim dilindungi Deployment Protection — crawler WhatsApp/
+ * Facebook bakal dapat halaman login Vercel, bukan gambar, sehingga
+ * preview-nya kosong.
+ *
+ * Urutan yang benar:
+ * 1. NEXT_PUBLIC_SITE_URL  — domain final (set manual, paling pasti)
+ * 2. VERCEL_PROJECT_PRODUCTION_URL — domain produksi proyek di Vercel
+ * 3. VERCEL_URL — cadangan terakhir (preview deployment)
  */
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000");
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
 
 const title = "Seawise Enterprise Apps — Restaurants Edition";
 const description =
