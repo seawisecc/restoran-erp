@@ -1,6 +1,8 @@
 import { ImageResponse } from "next/og";
 
 // Gambar yang muncul saat link aplikasi dibagikan (WhatsApp, Slack, X, dll).
+// Gaya diselaraskan dengan Pharmacy Store Edition: latar hijau gelap,
+// logo di atas, headline besar, deskripsi, lalu chip fitur.
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt = "Seawise Enterprise Apps — Restaurants Edition";
@@ -22,20 +24,19 @@ export default function OpengraphImage() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "68px 72px",
+          padding: "62px 66px",
           background:
-            "linear-gradient(135deg, #eef0ea 0%, #f5f3ee 55%, #f1ded0 100%)",
+            "linear-gradient(135deg, #16241c 0%, #1e3a2c 48%, #4a3f2a 100%)",
         }}
       >
         {/* Logo */}
         <div style={{ display: "flex", alignItems: "center" }}>
           <div
             style={{
-              width: 78,
-              height: 78,
-              borderRadius: 22,
-              background: "#1e3a2c",
+              width: 62,
+              height: 62,
+              borderRadius: 17,
+              background: "rgba(255,255,255,0.10)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -43,8 +44,8 @@ export default function OpengraphImage() {
             }}
           >
             <svg
-              width="42"
-              height="42"
+              width="34"
+              height="34"
               viewBox="0 0 24 24"
               fill="none"
               stroke="#ffffff"
@@ -58,10 +59,10 @@ export default function OpengraphImage() {
             <div
               style={{
                 position: "absolute",
-                top: 17,
-                right: 17,
-                width: 12,
-                height: 12,
+                top: 13,
+                right: 13,
+                width: 11,
+                height: 11,
                 borderRadius: 6,
                 background: "#c2632f",
                 display: "flex",
@@ -69,56 +70,90 @@ export default function OpengraphImage() {
             />
           </div>
           <div
-            style={{ display: "flex", flexDirection: "column", marginLeft: 20 }}
+            style={{ display: "flex", flexDirection: "column", marginLeft: 18 }}
           >
-            <div style={{ fontSize: 30, fontWeight: 700, color: "#1c2620" }}>
+            <div style={{ fontSize: 27, fontWeight: 700, color: "#ffffff" }}>
               Seawise Enterprise Apps
             </div>
-            <div style={{ fontSize: 21, color: "#7c837b" }}>
+            <div style={{ fontSize: 19, color: "rgba(255,255,255,0.55)" }}>
               Restaurants Edition
             </div>
           </div>
         </div>
 
         {/* Headline */}
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            marginTop: 58,
+          }}
+        >
           <div
             style={{
-              fontSize: 62,
+              fontSize: 66,
               fontWeight: 700,
-              color: "#1c2620",
+              color: "#ffffff",
               lineHeight: 1.12,
             }}
           >
-            Restoran Anda, rapi
+            Restoran Anda, rapi dari
           </div>
           <div
             style={{
-              fontSize: 62,
+              fontSize: 66,
               fontWeight: 700,
-              color: "#5f665f",
+              color: "#ffffff",
               lineHeight: 1.12,
             }}
           >
-            dari dapur sampai kasir.
+            dapur sampai kasir.
+          </div>
+        </div>
+
+        {/* Deskripsi */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            marginTop: 22,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 25,
+              color: "rgba(255,255,255,0.62)",
+              lineHeight: 1.4,
+            }}
+          >
+            Kasir per meja, layar dapur real-time, QR order, stok &amp; HPP per
+          </div>
+          <div
+            style={{
+              fontSize: 25,
+              color: "rgba(255,255,255,0.62)",
+              lineHeight: 1.4,
+            }}
+          >
+            porsi, hingga laporan — dalam satu aplikasi.
           </div>
         </div>
 
         {/* Chip fitur */}
-        <div style={{ display: "flex", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", marginTop: 34 }}>
           {chips.map((c) => (
             <div
               key={c}
               style={{
                 display: "flex",
-                padding: "11px 22px",
-                marginRight: 12,
-                marginTop: 12,
+                padding: "10px 21px",
+                marginRight: 11,
+                marginTop: 11,
                 borderRadius: 999,
-                background: "#ffffff",
-                border: "1px solid #e2ddd3",
-                color: "#1c2620",
-                fontSize: 23,
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.16)",
+                color: "rgba(255,255,255,0.86)",
+                fontSize: 22,
               }}
             >
               {c}
