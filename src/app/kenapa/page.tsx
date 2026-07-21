@@ -18,10 +18,27 @@ import {
   Users,
 } from "lucide-react";
 
+const pageTitle = "Kenapa Seawise";
+const pageDescription =
+  "Kasir per meja, layar dapur real-time, QR order, stok & HPP, sampai laporan. Satu aplikasi untuk restoran Indonesia. Mulai Rp4.700 per hari.";
+
 export const metadata: Metadata = {
-  title: "Kenapa Seawise — Restaurants Edition",
-  description:
-    "Kasir per meja, layar dapur real-time, QR order, stok & HPP, sampai laporan. Satu aplikasi untuk restoran Indonesia. Mulai Rp4.700 per hari.",
+  title: pageTitle,
+  description: pageDescription,
+  alternates: { canonical: "/kenapa" },
+  openGraph: {
+    type: "website",
+    locale: "id_ID",
+    url: "/kenapa",
+    siteName: "Seawise Enterprise Apps",
+    title: "Seawise Restaurants Edition — mulai Rp4.700 per hari",
+    description: pageDescription,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Seawise Restaurants Edition — mulai Rp4.700 per hari",
+    description: pageDescription,
+  },
 };
 
 const CONTACT = "mailto:seawise.cc@gmail.com?subject=Tanya%20Seawise%20Restaurants%20Edition";
