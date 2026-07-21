@@ -2,14 +2,19 @@
 
 import { useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Check, ShoppingBag } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { updateItemKdsStatus } from "@/app/(dashboard)/dapur/actions";
+import { markOrderServed, updateItemKdsStatus } from "@/app/(dashboard)/dapur/actions";
+import { formatQueue } from "@/lib/queue";
 
 type KdsStatus = "queued" | "preparing" | "ready";
 type OrderItem = { id: string; name: string; qty: number; kds_status: KdsStatus };
 type Order = {
   id: string;
   created_at: string;
+  queue_number: number | null;
+  customer_name: string | null;
+  served_at: string | null;
   restaurant_tables: { name: string } | null;
   order_items: OrderItem[];
 };
@@ -37,6 +42,14 @@ const statusConfig: Record<KdsStatus, { label: string; cls: string }> = {
     cls: "border-accent-success bg-accent-successBg text-accent-success",
   },
 };
+
+/** Ringkasan status satu pesanan untuk ditampilkan di ticker antrian. */
+function orderProgress(items: OrderItem[]) {
+  if (items.length === 0) return "Belum ada item";
+  if (items.every((i) => i.kds_status === "ready")) return "Siap diambil";
+  if (items.some((i) => i.kds_status === "preparing")) return "Sedang dimasak";
+  return "Menunggu";
+}
 
 function timeAgo(iso: string) {
   const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -79,6 +92,16 @@ export function KdsClient({ initialOrders }: { initialOrders: Order[] }) {
   }
 
   const orders = initialOrders;
+  // Antrian take away = pesanan tanpa meja yang BELUM diserahkan.
+  // Setelah dapur menekan "Diserahkan", pesanan keluar dari antrian.
+  const takeaways = orders.filter((o) => !o.restaurant_tables && !o.served_at);
+
+  function handleServed(orderId: string, label: string) {
+    if (!confirm(`Konfirmasi pesanan ${label} sudah diserahkan?`)) return;
+    startTransition(() => {
+      markOrderServed(orderId);
+    });
+  }
 
   return (
     <div>
@@ -94,6 +117,46 @@ export function KdsClient({ initialOrders }: { initialOrders: Order[] }) {
           Live
         </span>
       </div>
+
+      {/* ── Ticker antrian take away ──
+          Pesanan tanpa meja digeser terus-menerus di strip ini supaya
+          dapur selalu melihat nomor antrian yang harus disiapkan.
+          Arahkan kursor ke strip untuk menghentikan gerakannya. */}
+      {takeaways.length > 0 && (
+        <div className="mb-5 rounded-2xl border border-accent-peach/30 bg-accent-peachBg">
+          <div className="flex items-center gap-3 px-4 py-2.5">
+            <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-accent-peach">
+              <ShoppingBag size={13} /> Antrian Take Away
+            </span>
+            <span className="shrink-0 rounded-full bg-accent-peach px-2 py-0.5 text-[10px] font-bold text-white">
+              {takeaways.length}
+            </span>
+            <div className="sw-ticker min-w-0 flex-1">
+              <div className="sw-ticker-track">
+                {[...takeaways, ...takeaways].map((o, i) => (
+                  <div
+                    key={`${o.id}-${i}`}
+                    className="mr-3 flex items-center gap-2.5 whitespace-nowrap rounded-xl bg-white px-3 py-1.5"
+                  >
+                    <span className="flex h-7 shrink-0 items-center justify-center rounded-lg bg-accent-peach px-2 text-[11px] font-bold text-white">
+                      {formatQueue(o.queue_number)}
+                    </span>
+                    <span className="flex flex-col">
+                      <span className="text-xs font-bold text-ink">
+                        {o.customer_name || formatQueue(o.queue_number)}
+                      </span>
+                      <span className="text-[10px] text-ink-muted">
+                        {o.order_items.length} item &middot;{" "}
+                        {orderProgress(o.order_items)}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {orders.length === 0 ? (
         <div className="card p-16 text-center text-sm text-ink-muted">
@@ -114,11 +177,25 @@ export function KdsClient({ initialOrders }: { initialOrders: Order[] }) {
                 }`}
               >
                 <div className="flex items-center justify-between bg-surface px-4 py-2.5">
-                  <p className="text-sm font-bold text-ink">
-                    {order.restaurant_tables?.name ?? "Take Away"}
-                  </p>
-                  <p className="text-xs text-ink-muted">
-                    {timeAgo(order.created_at)}
+                  <div className="flex min-w-0 items-center gap-2">
+                    {!order.restaurant_tables && (
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent-peach text-[10px] font-bold text-white">
+                        {order.queue_number ?? "–"}
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-ink">
+                        {order.restaurant_tables?.name ?? "Take Away"}
+                      </p>
+                      {!order.restaurant_tables && order.customer_name && (
+                        <p className="truncate text-[10px] text-ink-muted">
+                          {order.customer_name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <p className="shrink-0 text-xs text-ink-muted">
+                    {order.served_at ? "Diserahkan" : timeAgo(order.created_at)}
                   </p>
                 </div>
                 <div className="p-3">
@@ -145,6 +222,30 @@ export function KdsClient({ initialOrders }: { initialOrders: Order[] }) {
                       </button>
                     ))
                   )}
+
+                  {/* Take away perlu konfirmasi serah terima — masakan
+                      "siap" belum tentu sudah diambil pelanggan. */}
+                  {!order.restaurant_tables &&
+                    order.order_items.length > 0 &&
+                    (order.served_at ? (
+                      <p className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-accent-successBg py-2 text-xs font-bold text-accent-success">
+                        <Check size={13} /> Sudah diserahkan
+                      </p>
+                    ) : (
+                      <button
+                        onClick={() =>
+                          handleServed(
+                            order.id,
+                            order.customer_name ||
+                              formatQueue(order.queue_number),
+                          )
+                        }
+                        disabled={isPending}
+                        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent py-2.5 text-xs font-bold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
+                      >
+                        <Check size={14} /> Konfirmasi Diserahkan
+                      </button>
+                    ))}
                 </div>
               </div>
             );

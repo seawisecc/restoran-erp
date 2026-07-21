@@ -23,7 +23,9 @@ export default async function TransaksiPage({
   ] = await Promise.all([
     supabase
       .from("outlets")
-      .select("id, name")
+      // Alamat ikut diambil karena nota menampilkan alamat OUTLET
+      // tempat transaksi terjadi (bukan alamat company).
+      .select("id, name, address")
       .eq("company_id", companyId)
       .eq("is_active", true)
       .order("name"),
@@ -34,7 +36,9 @@ export default async function TransaksiPage({
       .order("name"),
     supabase
       .from("orders")
-      .select("id, table_id, created_at, outlet_id")
+      .select(
+        "id, table_id, created_at, outlet_id, queue_number, customer_name",
+      )
       .eq("company_id", companyId)
       .eq("status", "open"),
     supabase

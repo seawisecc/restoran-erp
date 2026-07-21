@@ -7,6 +7,48 @@ import { getActiveCompanyId } from "@/lib/get-active-company";
 type PurchaseItemInput = { name: string; unit: string; qty: number; price: number };
 
 /**
+ * STOK OPNAME — penyesuaian stok manual.
+ *
+ * Model stok di aplikasi ini sengaja dibuat sederhana untuk UMKM:
+ * stok BERTAMBAH otomatis saat pembelian ditandai "Diterima", dan
+ * BERKURANG lewat opname manual di sini (dihitung fisik, mis. tiap
+ * tutup toko). Penjualan TIDAK memotong stok bahan otomatis, supaya
+ * tidak menuntut semua menu punya resep lengkap dan takaran presisi.
+ *
+ * `min_stock` dipakai sebagai ambang peringatan "stok menipis".
+ */
+export async function saveStockOpname(
+  materialId: string,
+  stockQty: number,
+  minStock: number,
+) {
+  const supabase = await createClient();
+  const companyId = await getActiveCompanyId();
+
+  if (!Number.isFinite(stockQty) || stockQty < 0) {
+    throw new Error("Jumlah stok tidak valid.");
+  }
+  if (!Number.isFinite(minStock) || minStock < 0) {
+    throw new Error("Stok minimum tidak valid.");
+  }
+
+  const { data, error } = await supabase
+    .from("raw_materials")
+    .update({ stock_qty: stockQty, min_stock: minStock })
+    .eq("id", materialId)
+    .eq("company_id", companyId)
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) {
+    throw new Error("Bahan baku tidak ditemukan.");
+  }
+
+  revalidatePath("/pembelian");
+  revalidatePath("/dashboard");
+}
+
+/**
  * Bikin PO baru. Bahan baku dicari berdasarkan nama (case-insensitive);
  * kalau belum ada di tabel raw_materials, otomatis dibuatkan barunya.
  * Stok belum nambah di sini — baru nambah pas PO ditandai "Diterima".

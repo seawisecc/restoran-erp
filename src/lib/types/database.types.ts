@@ -316,12 +316,15 @@ export type Database = {
           company_id: string
           created_at: string
           customer_id: string | null
+          customer_name: string | null
           discount_amount: number
           id: string
           outlet_id: string
           paid_at: string | null
           points_earned: number
           points_redeemed: number
+          queue_number: number | null
+          served_at: string | null
           service: number
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number
@@ -333,12 +336,15 @@ export type Database = {
           company_id: string
           created_at?: string
           customer_id?: string | null
+          customer_name?: string | null
           discount_amount?: number
           id?: string
           outlet_id: string
           paid_at?: string | null
           points_earned?: number
           points_redeemed?: number
+          queue_number?: number | null
+          served_at?: string | null
           service?: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
@@ -350,12 +356,15 @@ export type Database = {
           company_id?: string
           created_at?: string
           customer_id?: string | null
+          customer_name?: string | null
           discount_amount?: number
           id?: string
           outlet_id?: string
           paid_at?: string | null
           points_earned?: number
           points_redeemed?: number
+          queue_number?: number | null
+          served_at?: string | null
           service?: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number

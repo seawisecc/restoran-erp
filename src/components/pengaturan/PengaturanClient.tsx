@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   Building2,
   ChevronRight,
@@ -73,12 +73,21 @@ export function PengaturanClient({
   company,
   team,
   receiptPaper,
+  charges,
+  chargeReady,
 }: {
   outlets: Outlet[];
   tables: TableRow[];
   company: CompanyProfile;
   team: TeamMember[];
   receiptPaper: string;
+  charges: {
+    tax_enabled: boolean;
+    tax_rate: number;
+    service_enabled: boolean;
+    service_rate: number;
+  };
+  chargeReady: boolean;
 }) {
   const { company: activeCompany, role } = useCompany();
   const isOwner = role === "owner";
@@ -99,6 +108,26 @@ export function PengaturanClient({
   const [paperSaved, setPaperSaved] = useState(false);
   const [paperError, setPaperError] = useState<string | null>(null);
   const [paper, setPaper] = useState(receiptPaper);
+
+  // Controlled — supaya nilai yang tampil selalu sinkron dengan yang
+  // tersimpan di database, bukan sisa isian lama di DOM.
+  const [taxOn, setTaxOn] = useState(charges.tax_enabled);
+  const [taxRate, setTaxRate] = useState(String(charges.tax_rate));
+  const [svcOn, setSvcOn] = useState(charges.service_enabled);
+  const [svcRate, setSvcRate] = useState(String(charges.service_rate));
+
+  // Kalau data dari server berubah (setelah simpan), ikuti.
+  useEffect(() => {
+    setTaxOn(charges.tax_enabled);
+    setTaxRate(String(charges.tax_rate));
+    setSvcOn(charges.service_enabled);
+    setSvcRate(String(charges.service_rate));
+  }, [
+    charges.tax_enabled,
+    charges.tax_rate,
+    charges.service_enabled,
+    charges.service_rate,
+  ]);
 
   function handleToggleOutlet(id: string, current: boolean) {
     startTransition(() => {
@@ -342,6 +371,20 @@ export function PengaturanClient({
                 Atur biaya yang otomatis ditambahkan di tiap transaksi. Matikan
                 kalau restoran Anda tidak memungutnya.
               </p>
+              {!chargeReady && (
+                <div className="mb-5 rounded-xl border border-accent-warning/40 bg-accent-warningBg p-4">
+                  <p className="text-sm font-semibold text-accent-warning">
+                    Migrasi database belum dijalankan
+                  </p>
+                  <p className="mt-1 text-xs text-ink-muted">
+                    Kolom pajak &amp; service belum ada, jadi perubahan di sini
+                    tidak akan tersimpan. Jalankan{" "}
+                    <span className="font-semibold">0010_tax_service.sql</span>{" "}
+                    di Supabase &rarr; SQL Editor, lalu muat ulang halaman ini.
+                  </p>
+                </div>
+              )}
+
               <form onSubmit={handleSaveCharge} className="flex flex-col gap-5">
                 {/* Pajak */}
                 <div className="rounded-xl border border-surface-border p-4">
@@ -352,7 +395,8 @@ export function PengaturanClient({
                     <input
                       type="checkbox"
                       name="tax_enabled"
-                      defaultChecked={activeCompany.tax_enabled}
+                      checked={taxOn}
+                      onChange={(e) => setTaxOn(e.target.checked)}
                       disabled={!isOwner}
                       className="h-4 w-4"
                     />
@@ -364,7 +408,8 @@ export function PengaturanClient({
                       min={0}
                       max={100}
                       step="0.1"
-                      defaultValue={activeCompany.tax_rate}
+                      value={taxRate}
+                      onChange={(e) => setTaxRate(e.target.value)}
                       disabled={!isOwner}
                       className="w-24 rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent disabled:bg-surface"
                     />
@@ -381,7 +426,8 @@ export function PengaturanClient({
                     <input
                       type="checkbox"
                       name="service_enabled"
-                      defaultChecked={activeCompany.service_enabled}
+                      checked={svcOn}
+                      onChange={(e) => setSvcOn(e.target.checked)}
                       disabled={!isOwner}
                       className="h-4 w-4"
                     />
@@ -393,7 +439,8 @@ export function PengaturanClient({
                       min={0}
                       max={100}
                       step="0.1"
-                      defaultValue={activeCompany.service_rate}
+                      value={svcRate}
+                      onChange={(e) => setSvcRate(e.target.value)}
                       disabled={!isOwner}
                       className="w-24 rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent disabled:bg-surface"
                     />

@@ -8,7 +8,11 @@ export default async function PembelianPage() {
 
   const { data: purchases } = await supabase
     .from("purchases")
-    .select("id, status, total, created_at, received_at, suppliers(name)")
+    // purchase_items ikut diambil supaya rincian tiap pembelian bisa
+    // langsung dibuka tanpa perlu query tambahan saat diklik.
+    .select(
+      "id, status, total, created_at, received_at, suppliers(name), purchase_items(id, name, qty, price)",
+    )
     .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
@@ -20,7 +24,7 @@ export default async function PembelianPage() {
 
   const { data: rawMaterials } = await supabase
     .from("raw_materials")
-    .select("id, name, unit, stock_qty, min_stock")
+    .select("id, name, unit, stock_qty, min_stock, cost_price")
     .eq("company_id", companyId)
     .order("name");
 

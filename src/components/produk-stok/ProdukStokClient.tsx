@@ -1,10 +1,16 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { ChefHat, Plus, Search, Trash2 } from "lucide-react";
+import { ChefHat, Pencil, Plus, Search, Tags, Trash2, X } from "lucide-react";
 import { MenuFormModal } from "./MenuFormModal";
 import { RecipeFormModal } from "./RecipeFormModal";
-import { toggleMenuItemActive, deleteMenuItem } from "@/app/(dashboard)/produk-stok/actions";
+import {
+  toggleMenuItemActive,
+  deleteMenuItem,
+  createMenuCategory,
+  updateMenuCategory,
+  deleteMenuCategory,
+} from "@/app/(dashboard)/produk-stok/actions";
 
 type Category = { id: string; name: string; sort_order: number };
 type MenuItem = {
@@ -32,6 +38,49 @@ export function ProdukStokClient({
   const [modalOpen, setModalOpen] = useState(false);
   const [recipeItem, setRecipeItem] = useState<MenuItem | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // ===== Kelola kategori =====
+  const [catPanel, setCatPanel] = useState(false);
+  const [newCat, setNewCat] = useState("");
+  const [editingCat, setEditingCat] = useState<string | null>(null);
+  const [editCatName, setEditCatName] = useState("");
+  const [catError, setCatError] = useState<string | null>(null);
+
+  function runCat(fn: () => Promise<unknown>, done?: () => void) {
+    setCatError(null);
+    startTransition(async () => {
+      try {
+        await fn();
+        done?.();
+      } catch (err) {
+        setCatError(err instanceof Error ? err.message : "Gagal menyimpan.");
+      }
+    });
+  }
+
+  function handleAddCat(e: React.FormEvent) {
+    e.preventDefault();
+    const name = newCat.trim();
+    if (!name) return;
+    const formData = new FormData();
+    formData.set("name", name);
+    runCat(() => createMenuCategory(formData), () => setNewCat(""));
+  }
+
+  function handleRenameCat(id: string) {
+    const name = editCatName.trim();
+    if (!name) return;
+    runCat(() => updateMenuCategory(id, name), () => setEditingCat(null));
+  }
+
+  function handleDeleteCat(id: string, name: string) {
+    const used = items.filter((i) => i.category_id === id).length;
+    const msg = used
+      ? `Hapus kategori "${name}"? ${used} menu di dalamnya tidak ikut terhapus, hanya jadi Tanpa kategori.`
+      : `Hapus kategori "${name}"?`;
+    if (!confirm(msg)) return;
+    runCat(() => deleteMenuCategory(id));
+  }
 
   const categoryName = (id: string | null) =>
     categories.find((c) => c.id === id)?.name ?? "Tanpa kategori";
@@ -70,12 +119,20 @@ export function ProdukStokClient({
             {items.length} menu &middot; {categories.length} kategori
           </p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="btn-primary gap-2"
-        >
-          <Plus size={16} /> Tambah Menu
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setCatPanel(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-surface-border bg-surface-card px-4 py-2 text-sm font-semibold text-ink-muted hover:text-ink"
+          >
+            <Tags size={16} /> Kelola Kategori
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="btn-primary gap-2"
+          >
+            <Plus size={16} /> Tambah Menu
+          </button>
+        </div>
       </div>
 
       <div className="relative mb-4">
@@ -168,6 +225,132 @@ export function ProdukStokClient({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ===== Kelola Kategori ===== */}
+      {catPanel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-surface-border px-5 py-3.5">
+              <div>
+                <p className="text-sm font-bold text-ink">Kelola Kategori</p>
+                <p className="text-xs text-ink-muted">
+                  Kelompokkan menu sesuai kebutuhan restoran
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setCatPanel(false);
+                  setEditingCat(null);
+                  setCatError(null);
+                }}
+                className="rounded-md p-1 text-ink-muted hover:text-ink"
+                aria-label="Tutup"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="max-h-[50vh] overflow-y-auto">
+              {categories.length === 0 ? (
+                <p className="px-5 py-8 text-center text-sm text-ink-muted">
+                  Belum ada kategori. Tambahkan di bawah.
+                </p>
+              ) : (
+                categories.map((cat, i) => {
+                  const count = items.filter(
+                    (it) => it.category_id === cat.id,
+                  ).length;
+                  const editing = editingCat === cat.id;
+                  return (
+                    <div
+                      key={cat.id}
+                      className={`flex items-center gap-2 px-5 py-3 ${
+                        i !== 0 ? "border-t border-surface-border" : ""
+                      }`}
+                    >
+                      {editing ? (
+                        <>
+                          <input
+                            value={editCatName}
+                            onChange={(e) => setEditCatName(e.target.value)}
+                            autoFocus
+                            className="min-w-0 flex-1 rounded-lg border border-surface-border px-2.5 py-1.5 text-sm outline-none focus:border-accent"
+                          />
+                          <button
+                            onClick={() => handleRenameCat(cat.id)}
+                            disabled={isPending}
+                            className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white"
+                          >
+                            Simpan
+                          </button>
+                          <button
+                            onClick={() => setEditingCat(null)}
+                            className="rounded-lg border border-surface-border px-2.5 py-1.5 text-xs text-ink-muted"
+                          >
+                            Batal
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-ink">
+                              {cat.name}
+                            </p>
+                            <p className="text-xs text-ink-muted">
+                              {count} menu
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setEditingCat(cat.id);
+                              setEditCatName(cat.name);
+                            }}
+                            className="rounded-md p-1.5 text-ink-muted hover:bg-surface hover:text-ink"
+                            aria-label={`Ubah ${cat.name}`}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCat(cat.id, cat.name)}
+                            disabled={isPending}
+                            className="rounded-md p-1.5 text-ink-muted hover:bg-surface hover:text-accent-danger"
+                            aria-label={`Hapus ${cat.name}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <form
+              onSubmit={handleAddCat}
+              className="flex gap-2 border-t border-surface-border p-4"
+            >
+              <input
+                value={newCat}
+                onChange={(e) => setNewCat(e.target.value)}
+                placeholder="Kategori baru, misal: Minuman"
+                className="min-w-0 flex-1 rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent"
+              />
+              <button
+                type="submit"
+                disabled={isPending || !newCat.trim()}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                <Plus size={15} /> Tambah
+              </button>
+            </form>
+
+            {catError && (
+              <p className="px-4 pb-4 text-sm text-accent-danger">{catError}</p>
+            )}
+          </div>
         </div>
       )}
 

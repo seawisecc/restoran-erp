@@ -12,6 +12,7 @@ export default async function PengaturanPage() {
     { data: tables },
     { data: company },
     { data: paperRow, error: paperError },
+    { data: chargeRow, error: chargeError },
   ] = await Promise.all([
       supabase
         .from("outlets")
@@ -35,10 +36,27 @@ export default async function PengaturanPage() {
         .select("receipt_paper")
         .eq("id", companyId)
         .maybeSingle(),
+      // Pajak & service diambil DI SINI (bukan dari context layout),
+      // supaya setelah disimpan nilainya langsung ikut ter-refresh.
+      supabase
+        .from("companies")
+        .select("tax_enabled, tax_rate, service_enabled, service_rate")
+        .eq("id", companyId)
+        .maybeSingle(),
     ]);
 
   const receiptPaper =
     !paperError && paperRow?.receipt_paper ? paperRow.receipt_paper : "80mm";
+
+  // Kalau kolomnya belum ada (migrasi 0010 belum jalan), tandai supaya
+  // UI bisa kasih tahu penyebabnya — bukan gagal diam-diam.
+  const chargeReady = !chargeError && Boolean(chargeRow);
+  const charges = {
+    tax_enabled: chargeRow?.tax_enabled ?? true,
+    tax_rate: Number(chargeRow?.tax_rate ?? 10),
+    service_enabled: chargeRow?.service_enabled ?? false,
+    service_rate: Number(chargeRow?.service_rate ?? 0),
+  };
 
   // Daftar anggota tim + email-nya (email diambil via Admin Auth API,
   // karena auth.users gak bisa di-query langsung dari schema public).
@@ -75,6 +93,8 @@ export default async function PengaturanPage() {
       }}
       team={team}
       receiptPaper={receiptPaper}
+      charges={charges}
+      chargeReady={chargeReady}
     />
   );
 }

@@ -22,6 +22,7 @@ import {
   updateOrderItemQty,
 } from "@/app/(dashboard)/transaksi/actions";
 import { useCompany } from "@/components/providers/CompanyProvider";
+import { formatQueue } from "@/lib/queue";
 
 type Table = { id: string; name: string; seats: number; outlet_id: string };
 type OpenOrder = {
@@ -29,25 +30,34 @@ type OpenOrder = {
   table_id: string | null;
   created_at: string;
   outlet_id: string;
+  queue_number: number | null;
+  customer_name: string | null;
 };
 type ActiveOrder = {
   id: string;
   label: string;
   isTakeaway: boolean;
+  queueNumber: number | null;
+  customerName: string | null;
 };
 type Receipt = {
   label: string;
+  queueNumber: number | null;
+  customerName: string | null;
   items: OrderItem[];
   subtotal: number;
   service: number;
+  dpp: number;
   tax: number;
+  serviceRate: number;
+  taxRate: number;
   discountAmount: number;
   total: number;
   pointsEarned: number;
   pointsRedeemed: number;
   paidAt: string;
 };
-type Outlet = { id: string; name: string };
+type Outlet = { id: string; name: string; address: string | null };
 type Category = { id: string; name: string; sort_order: number };
 type MenuItem = {
   id: string;
@@ -160,6 +170,11 @@ export function PosClient({
   const [orderLoading, setOrderLoading] = useState(false);
   const [activeCat, setActiveCat] = useState<string | "all">("all");
 
+  // Form pesanan take away baru (nama & no HP sama-sama opsional).
+  const [takeawayForm, setTakeawayForm] = useState(false);
+  const [taName, setTaName] = useState("");
+  const [taPhone, setTaPhone] = useState("");
+
   // Antrean tulis: semua perubahan item dikirim ke server BERURUTAN
   // supaya server melihat urutan yang benar (gak ada lost-update saat
   // tap cepat), tanpa bikin UI nunggu (UI update optimistik duluan).
@@ -207,7 +222,13 @@ export function PosClient({
 
   // ===== Buka order (tanpa navigasi) =====
   function enterOrderView(label: string, isTakeaway: boolean) {
-    setOrder({ id: "", label, isTakeaway });
+    setOrder({
+      id: "",
+      label,
+      isTakeaway,
+      queueNumber: null,
+      customerName: null,
+    });
     setCart([]);
     resetLoyalty();
     setActiveCat("all");
@@ -220,7 +241,13 @@ export function PosClient({
     startTransition(async () => {
       try {
         const res = await openTableOrder(table.id);
-        setOrder({ id: res.orderId, label: table.name, isTakeaway: false });
+        setOrder({
+          id: res.orderId,
+          label: table.name,
+          isTakeaway: false,
+          queueNumber: null,
+          customerName: null,
+        });
         setCart(res.items);
         if (res.isNew) {
           setOpenState((prev) => [
@@ -230,6 +257,8 @@ export function PosClient({
               table_id: table.id,
               created_at: res.createdAt,
               outlet_id: table.outlet_id,
+              queue_number: null,
+              customer_name: null,
             },
           ]);
         }
@@ -242,14 +271,28 @@ export function PosClient({
     });
   }
 
-  /** Pesanan bungkus/bawa pulang — order tanpa meja. */
-  function openTakeaway() {
+  /** Pesanan bungkus/bawa pulang — order tanpa meja + nomor antrian. */
+  function submitTakeaway(e: React.FormEvent) {
+    e.preventDefault();
     if (!activeOutletId) return;
+    const name = taName.trim();
+    const prefillPhone = taPhone.trim();
+
+    setTakeawayForm(false);
     enterOrderView("Take Away", true);
+    // Nomor HP dipakai buat poin loyalty saat bayar nanti.
+    if (prefillPhone) setPhone(prefillPhone);
+
     startTransition(async () => {
       try {
-        const res = await openTakeawayOrder(activeOutletId);
-        setOrder({ id: res.orderId, label: "Take Away", isTakeaway: true });
+        const res = await openTakeawayOrder(activeOutletId, name || undefined);
+        setOrder({
+          id: res.orderId,
+          label: "Take Away",
+          isTakeaway: true,
+          queueNumber: res.queueNumber,
+          customerName: res.customerName,
+        });
         setCart([]);
         setOpenState((prev) => [
           ...prev,
@@ -258,8 +301,12 @@ export function PosClient({
             table_id: null,
             created_at: res.createdAt,
             outlet_id: activeOutletId,
+            queue_number: res.queueNumber,
+            customer_name: res.customerName,
           },
         ]);
+        setTaName("");
+        setTaPhone("");
       } catch {
         setView("grid");
         setOrder(null);
@@ -270,12 +317,18 @@ export function PosClient({
   }
 
   /** Lanjutkan pesanan take away yang masih terbuka. */
-  function resumeTakeaway(openOrder: OpenOrder, label: string) {
-    enterOrderView(label, true);
+  function resumeTakeaway(openOrder: OpenOrder) {
+    enterOrderView("Take Away", true);
     startTransition(async () => {
       try {
         const res = await openExistingOrder(openOrder.id);
-        setOrder({ id: res.orderId, label, isTakeaway: true });
+        setOrder({
+          id: res.orderId,
+          label: "Take Away",
+          isTakeaway: true,
+          queueNumber: res.queueNumber,
+          customerName: res.customerName,
+        });
         setCart(res.items);
       } catch {
         setView("grid");
@@ -369,6 +422,8 @@ export function PosClient({
     if (!confirm(`Konfirmasi pembayaran ${rupiah(finalTotal)}?`)) return;
     const currentOrderId = order.id;
     const label = order.label;
+    const queueNumber = order.queueNumber;
+    const customerName = order.customerName;
     const itemsSnapshot = cart.map((c) => ({ ...c }));
 
     startPayTransition(async () => {
@@ -384,10 +439,15 @@ export function PosClient({
       // supaya struk persis sama dengan yang tersimpan.
       setReceipt({
         label,
+        queueNumber,
+        customerName,
         items: itemsSnapshot,
         subtotal: res.subtotal,
         service: res.service,
+        dpp: res.dpp,
         tax: res.tax,
+        serviceRate: res.serviceRate,
+        taxRate: res.taxRate,
         discountAmount: res.discountAmount,
         total: res.total,
         pointsEarned: res.pointsEarned,
@@ -407,7 +467,89 @@ export function PosClient({
     [openState, activeOutletId],
   );
 
-  const outletName = outlets.find((o) => o.id === activeOutletId)?.name ?? "";
+  const activeOutlet = outlets.find((o) => o.id === activeOutletId);
+  const outletName = activeOutlet?.name ?? "";
+  const outletAddress = activeOutlet?.address ?? "";
+
+  // ===== Form pesanan take away baru =====
+  const takeawayModal = takeawayForm ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <form
+        onSubmit={submitTakeaway}
+        className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl"
+      >
+        <div className="flex items-center justify-between border-b border-surface-border px-5 py-3.5">
+          <div>
+            <p className="text-sm font-bold text-ink">Pesanan Take Away</p>
+            <p className="text-xs text-ink-muted">
+              Nomor antrian dibuat otomatis
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTakeawayForm(false)}
+            className="rounded-md p-1 text-ink-muted hover:text-ink"
+            aria-label="Tutup"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-4 p-5">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink">
+              Nama Pelanggan{" "}
+              <span className="font-normal text-ink-muted">(opsional)</span>
+            </label>
+            <input
+              value={taName}
+              onChange={(e) => setTaName(e.target.value)}
+              autoFocus
+              placeholder="misal: Budi"
+              className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+            <p className="mt-1 text-xs text-ink-muted">
+              Dipakai untuk memanggil saat pesanan siap.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink">
+              No. HP{" "}
+              <span className="font-normal text-ink-muted">(opsional)</span>
+            </label>
+            <input
+              value={taPhone}
+              onChange={(e) => setTaPhone(e.target.value)}
+              inputMode="numeric"
+              placeholder="08123456789"
+              className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+            <p className="mt-1 text-xs text-ink-muted">
+              Isi kalau pelanggan terdaftar — poin loyalty otomatis terpakai
+              saat bayar.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 border-t border-surface-border p-4">
+          <button
+            type="button"
+            onClick={() => setTakeawayForm(false)}
+            className="flex-1 rounded-lg border border-surface-border py-2.5 text-sm font-semibold text-ink-muted hover:text-ink"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            className="flex-1 rounded-lg bg-accent py-2.5 text-sm font-semibold text-white hover:bg-accent-hover"
+          >
+            Buat Pesanan
+          </button>
+        </div>
+      </form>
+    </div>
+  ) : null;
 
   // ===== Nota =====
   const receiptModal = receipt ? (
@@ -435,6 +577,11 @@ export function PosClient({
             {outletName && (
               <p className="text-xs text-ink-muted">{outletName}</p>
             )}
+            {outletAddress && (
+              <p className="mt-0.5 whitespace-pre-line text-[11px] leading-snug text-ink-muted">
+                {outletAddress}
+              </p>
+            )}
           </div>
 
           <div className="my-3 border-t border-dashed border-surface-border" />
@@ -443,6 +590,20 @@ export function PosClient({
             <span className="font-semibold text-ink">{receipt.label}</span>
             <span>{formatDateTime(receipt.paidAt)}</span>
           </div>
+
+          {receipt.queueNumber !== null && (
+            <div className="mt-2 flex items-center justify-between rounded-md border border-dashed border-surface-border px-2.5 py-1.5">
+              <span className="text-xs text-ink-muted">Nomor Antrian</span>
+              <span className="text-lg font-bold text-ink">
+                {formatQueue(receipt.queueNumber)}
+              </span>
+            </div>
+          )}
+          {receipt.customerName && (
+            <p className="mt-1.5 text-xs text-ink-muted">
+              a.n. <span className="font-semibold text-ink">{receipt.customerName}</span>
+            </p>
+          )}
 
           <div className="my-3 border-t border-dashed border-surface-border" />
 
@@ -464,20 +625,29 @@ export function PosClient({
 
           <div className="my-3 border-t border-dashed border-surface-border" />
 
+          {/* Rincian mengikuti standar pajak restoran:
+              Service dari Subtotal → DPP = Subtotal + Service →
+              Pajak dari DPP → Total = DPP + Pajak. */}
           <div className="space-y-1 text-xs">
             <div className="flex justify-between text-ink-muted">
               <span>Subtotal</span>
               <span>{rupiah(receipt.subtotal)}</span>
             </div>
             {receipt.service > 0 && (
-              <div className="flex justify-between text-ink-muted">
-                <span>Service</span>
-                <span>{rupiah(receipt.service)}</span>
-              </div>
+              <>
+                <div className="flex justify-between text-ink-muted">
+                  <span>Service Charge ({receipt.serviceRate}%)</span>
+                  <span>{rupiah(receipt.service)}</span>
+                </div>
+                <div className="flex justify-between border-t border-surface-border pt-1 font-semibold text-ink">
+                  <span>DPP</span>
+                  <span>{rupiah(receipt.dpp)}</span>
+                </div>
+              </>
             )}
             {receipt.tax > 0 && (
               <div className="flex justify-between text-ink-muted">
-                <span>Pajak</span>
+                <span>Pajak Restoran ({receipt.taxRate}%)</span>
                 <span>{rupiah(receipt.tax)}</span>
               </div>
             )}
@@ -488,7 +658,7 @@ export function PosClient({
               </div>
             )}
             <div className="flex justify-between border-t border-surface-border pt-1.5 text-sm font-bold">
-              <span>TOTAL</span>
+              <span>TOTAL BAYAR</span>
               <span>{rupiah(receipt.total)}</span>
             </div>
           </div>
@@ -533,7 +703,10 @@ export function PosClient({
   // ============================ RENDER ============================
   if (view === "order") {
     return (
-      <div className="-m-4 flex min-h-[calc(100vh-64px)] flex-col md:-m-6 md:flex-row">
+      // dvh (bukan vh) supaya tinggi ikut menyusut saat toolbar Safari
+      // muncul/hilang — vh bikin halaman lebih tinggi dari layar dan
+      // konten paling bawah tertutup bar navigasi.
+      <div className="-m-4 flex min-h-[calc(100dvh-64px)] flex-col pb-16 md:-m-6 md:flex-row md:pb-0">
         {/* ===== Kiri: grid menu ===== */}
         <div className="flex-1 p-4 md:p-6">
           <div className="mb-4 flex items-center gap-3">
@@ -545,9 +718,22 @@ export function PosClient({
               <ChevronLeft size={18} />
             </button>
             <h2 className="text-lg font-bold text-ink">Pilih Menu</h2>
-            <span className="ml-auto rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-white">
-              {order?.label ?? "Pesanan"}
-            </span>
+            <div className="ml-auto flex items-center gap-2">
+              {order?.customerName && (
+                <span className="hidden text-xs text-ink-muted sm:inline">
+                  {order.customerName}
+                </span>
+              )}
+              {order?.queueNumber !== null &&
+                order?.queueNumber !== undefined && (
+                  <span className="rounded-full bg-accent-peachBg px-3 py-1.5 text-xs font-bold text-accent-peach">
+                    Antrian {formatQueue(order.queueNumber)}
+                  </span>
+                )}
+              <span className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-white">
+                {order?.label ?? "Pesanan"}
+              </span>
+            </div>
           </div>
 
           <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
@@ -713,10 +899,16 @@ export function PosClient({
               <span>{rupiah(subtotal)}</span>
             </div>
             {serviceRate > 0 && (
-              <div className="mb-1 flex justify-between text-sm text-ink-muted">
-                <span>Service ({serviceRate}%)</span>
-                <span>{rupiah(service)}</span>
-              </div>
+              <>
+                <div className="mb-1 flex justify-between text-sm text-ink-muted">
+                  <span>Service ({serviceRate}%)</span>
+                  <span>{rupiah(service)}</span>
+                </div>
+                <div className="mb-1 flex justify-between border-t border-surface-border pt-1 text-sm font-semibold text-ink">
+                  <span>DPP</span>
+                  <span>{rupiah(subtotal + service)}</span>
+                </div>
+              </>
             )}
             {taxRate > 0 && (
               <div className="mb-1 flex justify-between text-sm text-ink-muted">
@@ -807,7 +999,7 @@ export function PosClient({
             </p>
           </div>
           <button
-            onClick={openTakeaway}
+            onClick={() => setTakeawayForm(true)}
             disabled={!activeOutletId}
             className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
           >
@@ -817,16 +1009,18 @@ export function PosClient({
 
         {takeaways.length > 0 && (
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
-            {takeaways.map((o, i) => (
+            {takeaways.map((o) => (
               <button
                 key={o.id}
-                onClick={() => resumeTakeaway(o, `Take Away #${i + 1}`)}
+                onClick={() => resumeTakeaway(o)}
                 className="flex items-center gap-2.5 rounded-xl border border-accent-peach/40 bg-accent-peachBg px-3 py-2.5 text-left transition-colors hover:border-accent-peach active:scale-[0.98]"
               >
-                <ShoppingBag size={16} className="shrink-0 text-accent-peach" />
+                <span className="flex h-9 shrink-0 items-center justify-center rounded-lg bg-accent-peach px-2 text-[11px] font-bold text-white">
+                  {formatQueue(o.queue_number)}
+                </span>
                 <div className="min-w-0">
                   <p className="truncate text-xs font-bold text-ink">
-                    Take Away #{i + 1}
+                    {o.customer_name || formatQueue(o.queue_number)}
                   </p>
                   <p className="text-[10px] text-ink-muted">
                     {timeAgo(o.created_at)}
@@ -870,6 +1064,7 @@ export function PosClient({
         </div>
       )}
 
+      {takeawayModal}
       {receiptModal}
     </div>
   );

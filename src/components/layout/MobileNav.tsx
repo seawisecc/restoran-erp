@@ -26,7 +26,12 @@ export function MobileNav() {
   const visibleItems = items.filter((i) => canAccessModule(modules, i.key));
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-surface-border bg-surface-card md:hidden">
+    // z-30 supaya selalu di atas konten (kartu keranjang, dsb), dan
+    // padding safe-area biar tidak ketutup home indicator iPhone.
+    <nav
+      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-surface-border bg-surface-card md:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       {visibleItems.map(({ href, label, icon: Icon }) => {
         const active = pathname.startsWith(href);
         return (

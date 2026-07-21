@@ -69,6 +69,50 @@ export async function createMenuCategory(formData: FormData) {
   revalidatePath("/produk-stok");
 }
 
+export async function updateMenuCategory(id: string, name: string) {
+  const supabase = await createClient();
+  const companyId = await getActiveCompanyId();
+
+  const clean = name.trim();
+  if (!clean) throw new Error("Nama kategori wajib diisi.");
+
+  const { error } = await supabase
+    .from("menu_categories")
+    .update({ name: clean })
+    .eq("id", id)
+    .eq("company_id", companyId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/produk-stok");
+  revalidatePath("/transaksi");
+}
+
+/**
+ * Hapus kategori. Menu yang memakainya TIDAK ikut terhapus — cukup
+ * dilepas jadi "Tanpa kategori", supaya tidak ada menu yang hilang
+ * gara-gara kategorinya dirapikan.
+ */
+export async function deleteMenuCategory(id: string) {
+  const supabase = await createClient();
+  const companyId = await getActiveCompanyId();
+
+  await supabase
+    .from("menu_items")
+    .update({ category_id: null })
+    .eq("category_id", id)
+    .eq("company_id", companyId);
+
+  const { error } = await supabase
+    .from("menu_categories")
+    .delete()
+    .eq("id", id)
+    .eq("company_id", companyId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/produk-stok");
+  revalidatePath("/transaksi");
+}
+
 // ===================== RESEP (buat hitung HPP) =====================
 
 export async function getMenuItemRecipe(menuItemId: string) {

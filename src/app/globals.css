@@ -61,6 +61,48 @@
   animation: swFadeIn 0.4s ease both;
 }
 
+/* ── Ticker antrian take away di layar dapur ──
+   Track digandakan 2× di markup, lalu digeser -50% supaya loop-nya
+   mulus tanpa jeda. */
+@keyframes swTicker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.sw-ticker {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 40px,
+    #000 calc(100% - 40px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 40px,
+    #000 calc(100% - 40px),
+    transparent 100%
+  );
+}
+.sw-ticker-track {
+  display: flex;
+  width: max-content;
+  animation: swTicker 28s linear infinite;
+}
+.sw-ticker:hover .sw-ticker-track {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw-ticker-track {
+    animation: none;
+  }
+}
+
 /* Skeleton shimmer untuk perceived speed saat pindah menu */
 .sw-skeleton {
   position: relative;

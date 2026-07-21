@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveCompanyId } from "@/lib/get-active-company";
+import { startOfDayWib } from "@/lib/queue";
 
 /**
  * Versi SPA dari openOrCreateOrder: TIDAK redirect, tapi MENGEMBALIKAN
@@ -63,14 +64,43 @@ export async function openTableOrder(tableId: string) {
 }
 
 /**
- * Bikin order TAKE AWAY — order tanpa meja (table_id null). Dipakai
- * buat pesanan bungkus/bawa pulang yang gak menempati meja.
+ * Bikin order TAKE AWAY — order tanpa meja (table_id null), dengan
+ * nomor antrian otomatis yang dihitung per outlet dan reset tiap hari.
+ * Nama pelanggan opsional (buat dipanggil saat pesanan siap).
  */
-export async function openTakeawayOrder(outletId: string) {
+export async function openTakeawayOrder(
+  outletId: string,
+  customerName?: string,
+) {
   const supabase = await createClient();
   const companyId = await getActiveCompanyId();
 
   if (!outletId) throw new Error("Outlet belum dipilih.");
+
+  // Nomor antrian = nomor terakhir hari ini di outlet ini + 1.
+  //
+  // PENTING: baris dengan queue_number NULL harus dibuang dulu. Di
+  // PostgreSQL, "ORDER BY queue_number DESC" menaruh NULL PALING ATAS,
+  // jadi kalau ada order take away lama yang belum punya nomor (mis.
+  // dibuat sebelum migrasi 0012), dia yang keambil dan nomor antrian
+  // selalu balik ke 1 — bikin nomor kembar dalam satu hari.
+  //
+  // Statusnya sengaja TIDAK difilter: order yang sudah dibayar tetap
+  // dihitung, supaya nomor terus berlanjut sampai ganti hari.
+  const { data: last } = await supabase
+    .from("orders")
+    .select("queue_number")
+    .eq("company_id", companyId)
+    .eq("outlet_id", outletId)
+    .is("table_id", null)
+    .not("queue_number", "is", null)
+    .gte("created_at", startOfDayWib())
+    .order("queue_number", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  const queueNumber = (last?.queue_number ?? 0) + 1;
+  const name = customerName?.trim() || null;
 
   const { data: created, error } = await supabase
     .from("orders")
@@ -79,14 +109,18 @@ export async function openTakeawayOrder(outletId: string) {
       outlet_id: outletId,
       table_id: null,
       status: "open",
+      queue_number: queueNumber,
+      customer_name: name,
     })
-    .select("id, created_at")
+    .select("id, created_at, queue_number, customer_name")
     .single();
   if (error) throw new Error(error.message);
 
   return {
     orderId: created.id,
     createdAt: created.created_at,
+    queueNumber: created.queue_number ?? queueNumber,
+    customerName: created.customer_name ?? null,
     items: [] as {
       id: string;
       menu_item_id: string | null;
@@ -106,7 +140,7 @@ export async function openExistingOrder(orderId: string) {
 
   const { data: order } = await supabase
     .from("orders")
-    .select("id, created_at, status")
+    .select("id, created_at, status, queue_number, customer_name")
     .eq("id", orderId)
     .maybeSingle();
   if (!order) throw new Error("Pesanan tidak ditemukan.");
@@ -120,6 +154,8 @@ export async function openExistingOrder(orderId: string) {
   return {
     orderId: order.id,
     createdAt: order.created_at,
+    queueNumber: order.queue_number ?? null,
+    customerName: order.customer_name ?? null,
     items: items ?? [],
   };
 }
@@ -354,7 +390,12 @@ export async function payOrder(
     success: true as const,
     subtotal,
     service,
+    // DPP (Dasar Pengenaan Pajak) = subtotal + service charge.
+    dpp: subtotal + service,
     tax,
+    // Persentase dikirim juga supaya nota bisa menulis "Service (5%)".
+    serviceRate: serviceEnabled ? serviceRate : 0,
+    taxRate: taxEnabled ? taxRate : 0,
     discountAmount,
     total: finalTotal,
     pointsEarned,

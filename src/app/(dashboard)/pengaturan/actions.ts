@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getActiveCompanyId } from "@/lib/get-active-company";
+import type { Database } from "@/lib/types/database.types";
+
+type CompanyUpdate = Database["public"]["Tables"]["companies"]["Update"];
 
 // Hanya owner yang boleh mengubah profil resto & mengelola pengguna.
 async function assertOwner(companyId: string) {
@@ -25,6 +28,34 @@ async function assertOwner(companyId: string) {
   }
 }
 
+/**
+ * Update baris `companies` dengan aman.
+ *
+ * Kenapa pakai admin client: kalau RLS pada tabel companies tidak
+ * mengizinkan UPDATE dari user biasa, PostgREST TIDAK melempar error —
+ * dia balas sukses dengan 0 baris terubah. Akibatnya penyimpanan gagal
+ * diam-diam dan nilainya terlihat "balik lagi". Kita sudah memverifikasi
+ * pemanggilnya owner lewat assertOwner(), jadi aman memakai service role.
+ *
+ * `.select("id")` dipakai untuk MEMASTIKAN memang ada baris yang berubah;
+ * kalau kosong, kita lempar error yang jelas alih-alih diam.
+ */
+async function updateCompanyRow(companyId: string, patch: CompanyUpdate) {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("companies")
+    .update(patch)
+    .eq("id", companyId)
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) {
+    throw new Error(
+      "Pengaturan gagal disimpan — data restoran tidak ditemukan atau tidak bisa diubah.",
+    );
+  }
+}
+
 // ===================== PROFIL RESTO =====================
 
 export async function updateCompanyProfile(formData: FormData) {
@@ -35,13 +66,7 @@ export async function updateCompanyProfile(formData: FormData) {
   const address = (formData.get("address") as string)?.trim() || null;
   if (!name) throw new Error("Nama restoran wajib diisi.");
 
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("companies")
-    .update({ name, address })
-    .eq("id", companyId);
-
-  if (error) throw new Error(error.message);
+  await updateCompanyRow(companyId, { name, address });
   revalidatePath("/pengaturan");
   revalidatePath("/dashboard");
 }
@@ -64,20 +89,17 @@ export async function updateChargeSettings(formData: FormData) {
     throw new Error("Rate service harus 0–100%.");
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("companies")
-    .update({
-      tax_enabled: taxEnabled,
-      tax_rate: taxRate,
-      service_enabled: serviceEnabled,
-      service_rate: serviceRate,
-    })
-    .eq("id", companyId);
+  await updateCompanyRow(companyId, {
+    tax_enabled: taxEnabled,
+    tax_rate: taxRate,
+    service_enabled: serviceEnabled,
+    service_rate: serviceRate,
+  });
 
-  if (error) throw new Error(error.message);
   revalidatePath("/pengaturan");
   revalidatePath("/transaksi");
+  // Layout dashboard yang menyuplai setting ini ke layar kasir.
+  revalidatePath("/", "layout");
 }
 
 // ===================== NOTA / PRINTER =====================
@@ -93,13 +115,7 @@ export async function updateReceiptSettings(formData: FormData) {
     throw new Error("Ukuran kertas tidak valid.");
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("companies")
-    .update({ receipt_paper: paper })
-    .eq("id", companyId);
-
-  if (error) throw new Error(error.message);
+  await updateCompanyRow(companyId, { receipt_paper: paper });
   revalidatePath("/pengaturan");
   revalidatePath("/transaksi");
 }
@@ -304,8 +320,8 @@ export async function deleteTable(id: string) {
 // ===================== LOYALTY =====================
 
 export async function updateLoyaltySettings(formData: FormData) {
-  const supabase = await createClient();
   const companyId = await getActiveCompanyId();
+  await assertOwner(companyId);
 
   const earnRate = Number(formData.get("loyalty_earn_rate"));
   const redeemRate = Number(formData.get("loyalty_redeem_rate"));
@@ -317,14 +333,11 @@ export async function updateLoyaltySettings(formData: FormData) {
     throw new Error("Rate poin ditukar harus lebih dari 0.");
   }
 
-  const { error } = await supabase
-    .from("companies")
-    .update({
-      loyalty_earn_rate: earnRate,
-      loyalty_redeem_rate: redeemRate,
-    })
-    .eq("id", companyId);
+  await updateCompanyRow(companyId, {
+    loyalty_earn_rate: earnRate,
+    loyalty_redeem_rate: redeemRate,
+  });
 
-  if (error) throw new Error(error.message);
   revalidatePath("/pengaturan");
+  revalidatePath("/", "layout");
 }
