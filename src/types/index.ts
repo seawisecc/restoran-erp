@@ -11,6 +11,8 @@ export interface Company {
   loyalty_earn_rate: number;
   loyalty_redeem_rate: number;
   created_at: string;
+  // URL logo usaha (dicetak di kepala nota). null = belum ada.
+  logo_url: string | null;
   // Pengaturan biaya transaksi (pajak & service charge).
   tax_enabled: boolean;
   tax_rate: number;

@@ -96,8 +96,17 @@ export default async function DashboardLayout({
     charge.service_rate = Number(chargeRow.service_rate ?? 0);
   }
 
+  // Logo usaha — defensif juga (kalau migrasi 0014 belum jalan, null).
+  let logoUrl: string | null = null;
+  const { data: logoRow, error: logoError } = await supabase
+    .from("companies")
+    .select("logo_url")
+    .eq("id", activeMembership.companies!.id)
+    .maybeSingle();
+  if (!logoError) logoUrl = logoRow?.logo_url ?? null;
+
   const activeCompany: ActiveCompanyContext = {
-    company: { ...activeMembership.companies!, ...charge },
+    company: { ...activeMembership.companies!, ...charge, logo_url: logoUrl },
     role: activeMembership.role,
     // Owner selalu akses penuh (modules null).
     modules: userModules,

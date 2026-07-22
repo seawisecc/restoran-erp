@@ -71,6 +71,23 @@ export async function updateCompanyProfile(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+/**
+ * Simpan URL logo usaha. File-nya sudah diunggah ke Supabase Storage
+ * dari sisi client; di sini kita cukup menyimpan URL-nya (atau null
+ * saat logo dihapus). Owner-only + verifikasi baris.
+ */
+export async function saveCompanyLogo(logoUrl: string | null) {
+  const companyId = await getActiveCompanyId();
+  await assertOwner(companyId);
+
+  const clean = logoUrl?.trim() || null;
+  await updateCompanyRow(companyId, { logo_url: clean });
+
+  revalidatePath("/pengaturan");
+  revalidatePath("/transaksi");
+  revalidatePath("/", "layout");
+}
+
 // ===================== PAJAK & SERVICE =====================
 
 export async function updateChargeSettings(formData: FormData) {

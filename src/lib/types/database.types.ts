@@ -19,6 +19,7 @@ export type Database = {
           address: string | null
           created_at: string
           id: string
+          logo_url: string | null
           loyalty_earn_rate: number
           loyalty_redeem_rate: number
           name: string
@@ -35,6 +36,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           id?: string
+          logo_url?: string | null
           loyalty_earn_rate?: number
           loyalty_redeem_rate?: number
           name: string
@@ -51,6 +53,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           id?: string
+          logo_url?: string | null
           loyalty_earn_rate?: number
           loyalty_redeem_rate?: number
           name?: string

@@ -12,12 +12,14 @@ import {
   Receipt,
   Store,
   Trash2,
+  Upload,
   Users,
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
 import {
   deleteTable,
+  saveCompanyLogo,
   toggleOutletActive,
   updateChargeSettings,
   updateCompanyProfile,
@@ -25,6 +27,7 @@ import {
   updateReceiptSettings,
 } from "@/app/(dashboard)/pengaturan/actions";
 import { useCompany } from "@/components/providers/CompanyProvider";
+import { createClient } from "@/lib/supabase/client";
 import { OutletFormModal } from "./OutletFormModal";
 import { TableFormModal } from "./TableFormModal";
 import { TableQrModal } from "./TableQrModal";
@@ -42,7 +45,11 @@ type TableRow = {
   seats: number;
   outlets: { name: string } | null;
 };
-type CompanyProfile = { name: string; address: string | null };
+type CompanyProfile = {
+  name: string;
+  address: string | null;
+  logo_url: string | null;
+};
 
 type SectionKey =
   | "profil"
@@ -101,6 +108,67 @@ export function PengaturanClient({
 
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+
+  // ===== Logo usaha =====
+  const [logoUrl, setLogoUrl] = useState<string | null>(company.logo_url);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // reset supaya file yang sama bisa dipilih lagi
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setLogoError("File harus berupa gambar (PNG/JPG).");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError("Ukuran logo maksimal 2 MB.");
+      return;
+    }
+
+    setLogoError(null);
+    setLogoBusy(true);
+    try {
+      const supabase = createClient();
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      // Nama file mengandung timestamp supaya tidak ketimpa cache lama.
+      const path = `${activeCompany.id}/logo-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("logos")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw new Error(upErr.message);
+
+      const { data } = supabase.storage.from("logos").getPublicUrl(path);
+      await saveCompanyLogo(data.publicUrl);
+      setLogoUrl(data.publicUrl);
+    } catch (err) {
+      setLogoError(
+        err instanceof Error
+          ? err.message
+          : "Gagal mengunggah logo. Pastikan storage sudah disiapkan.",
+      );
+    } finally {
+      setLogoBusy(false);
+    }
+  }
+
+  function handleLogoRemove() {
+    if (!confirm("Hapus logo usaha?")) return;
+    setLogoError(null);
+    setLogoBusy(true);
+    startTransition(async () => {
+      try {
+        await saveCompanyLogo(null);
+        setLogoUrl(null);
+      } catch (err) {
+        setLogoError(err instanceof Error ? err.message : "Gagal menghapus.");
+      } finally {
+        setLogoBusy(false);
+      }
+    });
+  }
   const [loyaltyError, setLoyaltyError] = useState<string | null>(null);
   const [loyaltySaved, setLoyaltySaved] = useState(false);
   const [chargeSaved, setChargeSaved] = useState(false);
@@ -311,8 +379,79 @@ export function PengaturanClient({
             <div className="card max-w-xl p-6">
               <h3 className="mb-1 text-base font-bold text-ink">Profil Resto</h3>
               <p className="mb-5 text-xs text-ink-muted">
-                Nama & alamat ini dipakai di struk dan tampilan aplikasi.
+                Logo, nama &amp; alamat ini dipakai di struk dan tampilan
+                aplikasi.
               </p>
+
+              {/* ── Logo usaha ── */}
+              <div className="mb-5">
+                <label className="mb-1.5 block text-sm font-medium text-ink">
+                  Logo Usaha
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-surface-border bg-surface">
+                    {logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={logoUrl}
+                        alt="Logo usaha"
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <Store size={26} className="text-ink-muted" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    {isOwner ? (
+                      <div className="flex flex-wrap gap-2">
+                        <label
+                          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-surface-border bg-surface-card px-3 py-2 text-xs font-semibold text-ink-muted hover:text-ink ${
+                            logoBusy ? "pointer-events-none opacity-60" : ""
+                          }`}
+                        >
+                          <Upload size={13} />
+                          {logoBusy
+                            ? "Mengunggah..."
+                            : logoUrl
+                              ? "Ganti Logo"
+                              : "Unggah Logo"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoChange}
+                            disabled={logoBusy}
+                            className="hidden"
+                          />
+                        </label>
+                        {logoUrl && (
+                          <button
+                            type="button"
+                            onClick={handleLogoRemove}
+                            disabled={logoBusy}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-surface-border px-3 py-2 text-xs font-semibold text-ink-muted hover:text-accent-danger"
+                          >
+                            <Trash2 size={13} /> Hapus
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-ink-muted">
+                        Hanya pemilik yang bisa mengubah logo.
+                      </p>
+                    )}
+                    <p className="mt-1.5 text-xs text-ink-muted">
+                      PNG/JPG, maks 2 MB. Disarankan latar transparan &amp;
+                      bentuk persegi.
+                    </p>
+                    {logoError && (
+                      <p className="mt-1 text-xs text-accent-danger">
+                        {logoError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-ink">

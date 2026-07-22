@@ -48,6 +48,14 @@ export default async function PengaturanPage() {
   const receiptPaper =
     !paperError && paperRow?.receipt_paper ? paperRow.receipt_paper : "80mm";
 
+  // Logo diambil defensif: kalau migrasi 0014 belum jalan, cukup null.
+  const { data: logoRow, error: logoError } = await supabase
+    .from("companies")
+    .select("logo_url")
+    .eq("id", companyId)
+    .maybeSingle();
+  const logoUrl = !logoError ? (logoRow?.logo_url ?? null) : null;
+
   // Kalau kolomnya belum ada (migrasi 0010 belum jalan), tandai supaya
   // UI bisa kasih tahu penyebabnya — bukan gagal diam-diam.
   const chargeReady = !chargeError && Boolean(chargeRow);
@@ -90,6 +98,7 @@ export default async function PengaturanPage() {
       company={{
         name: company?.name ?? "",
         address: company?.address ?? null,
+        logo_url: logoUrl,
       }}
       team={team}
       receiptPaper={receiptPaper}

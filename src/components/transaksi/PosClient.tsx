@@ -573,6 +573,14 @@ export function PosClient({
           className="max-h-[65vh] overflow-y-auto bg-white px-6 py-5 text-[#1c2620]"
         >
           <div className="text-center">
+            {company.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={company.logo_url}
+                alt={company.name}
+                className="mx-auto mb-2 h-14 w-auto max-w-[70%] object-contain"
+              />
+            )}
             <p className="text-base font-bold">{company.name}</p>
             {outletName && (
               <p className="text-xs text-ink-muted">{outletName}</p>
