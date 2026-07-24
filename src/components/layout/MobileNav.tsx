@@ -38,12 +38,21 @@ export function MobileNav() {
           <Link
             key={href}
             href={href}
-            className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] ${
+            aria-current={active ? "page" : undefined}
+            className={`flex flex-1 flex-col items-center gap-1 pb-1.5 pt-2 text-[11px] font-medium transition-colors ${
               active ? "text-accent" : "text-ink-muted"
             }`}
           >
-            <Icon size={20} />
-            {label}
+            {/* Item aktif diberi "pill" berlatar aksen dengan ikon putih,
+                supaya jelas mana yang sedang dibuka. */}
+            <span
+              className={`flex h-8 w-12 items-center justify-center rounded-full transition-colors ${
+                active ? "bg-accent text-white" : "bg-transparent"
+              }`}
+            >
+              <Icon size={19} strokeWidth={active ? 2.4 : 2} />
+            </span>
+            <span className={active ? "font-semibold" : ""}>{label}</span>
           </Link>
         );
       })}
