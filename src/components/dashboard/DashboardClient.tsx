@@ -96,18 +96,27 @@ export function DashboardClient({
         </p>
       </div>
 
-      {/* ── Kartu ringkasan ── */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* ── Kartu ringkasan ──
+          Di HP dibuat kotak (2 per baris) supaya rapi & seragam; di
+          layar besar kembali proporsi normal 4 kolom. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {stats.map(({ label, value, icon: Icon, hint }) => (
-          <div key={label} className="card p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface">
+          <div
+            key={label}
+            className="card flex aspect-square flex-col justify-between p-4 sm:aspect-auto"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs leading-snug text-ink-muted">{label}</p>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface">
                 <Icon size={15} className="text-accent" />
               </span>
-              <p className="text-xs text-ink-muted">{label}</p>
             </div>
-            <p className="text-xl font-bold text-ink">{value}</p>
-            <p className="mt-0.5 text-[11px] text-ink-muted">{hint}</p>
+            <div>
+              <p className="text-xl font-bold leading-tight text-ink sm:text-2xl">
+                {value}
+              </p>
+              <p className="mt-0.5 text-[11px] text-ink-muted">{hint}</p>
+            </div>
           </div>
         ))}
       </div>
