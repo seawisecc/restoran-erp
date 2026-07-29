@@ -1,11 +1,11 @@
 import { ImageResponse } from "next/og";
 
-// Preview khusus halaman penawaran — memakai pengait harga karena
+// Preview khusus halaman penawaran - memakai pengait harga karena
 // halaman ini yang paling sering dibagikan ke calon klien.
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt =
-  "Seawise Restaurants Edition — sistem operasional restoran mulai Rp4.700 per hari";
+  "Resto & Cafe Management by Seawise Studio - mulai Rp4.700 per hari";
 
 export default function KenapaOpengraphImage() {
   return new ImageResponse(
@@ -66,10 +66,10 @@ export default function KenapaOpengraphImage() {
             style={{ display: "flex", flexDirection: "column", marginLeft: 20 }}
           >
             <div style={{ fontSize: 29, fontWeight: 700, color: "#ffffff" }}>
-              Seawise Enterprise Apps
+              Resto &amp; Cafe Management
             </div>
             <div style={{ fontSize: 20, color: "rgba(255,255,255,0.55)" }}>
-              Restaurants Edition
+              by Seawise Studio
             </div>
           </div>
         </div>
@@ -84,7 +84,7 @@ export default function KenapaOpengraphImage() {
               marginBottom: 14,
             }}
           >
-            SISTEM MANAJEMEN RESTORAN
+SISTEM MANAJEMEN RESTO &amp; CAFE
           </div>
           <div
             style={{
@@ -113,7 +113,7 @@ export default function KenapaOpengraphImage() {
               lineHeight: 1.35,
             }}
           >
-            HPP per porsi, sampai laporan — satu platform.
+            HPP per porsi, sampai laporan - satu platform.
           </div>
         </div>
 

@@ -7,7 +7,7 @@ import { getActiveCompanyId } from "@/lib/get-active-company";
 type PurchaseItemInput = { name: string; unit: string; qty: number; price: number };
 
 /**
- * STOK OPNAME — penyesuaian stok manual.
+ * STOK OPNAME - penyesuaian stok manual.
  *
  * Model stok di aplikasi ini sengaja dibuat sederhana untuk UMKM:
  * stok BERTAMBAH otomatis saat pembelian ditandai "Diterima", dan
@@ -51,7 +51,7 @@ export async function saveStockOpname(
 /**
  * Bikin PO baru. Bahan baku dicari berdasarkan nama (case-insensitive);
  * kalau belum ada di tabel raw_materials, otomatis dibuatkan barunya.
- * Stok belum nambah di sini — baru nambah pas PO ditandai "Diterima".
+ * Stok belum nambah di sini - baru nambah pas PO ditandai "Diterima".
  */
 export async function createPurchase(data: {
   supplierId: string | null;
@@ -120,7 +120,7 @@ export async function createPurchase(data: {
 
 /**
  * Tandai PO sebagai diterima. Ini yang bikin stok bahan baku
- * beneran nambah — jangan dijalankan 2x untuk PO yang sama
+ * beneran nambah - jangan dijalankan 2x untuk PO yang sama
  * (barangnya bakal ke-double-count).
  */
 export async function receivePurchase(purchaseId: string) {

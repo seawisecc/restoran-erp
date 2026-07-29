@@ -18,8 +18,8 @@ function Logo() {
         <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-[#c2632f]" />
       </div>
       <div className="leading-tight">
-        <div className="font-bold text-[#1c2620]">Seawise Enterprise Apps</div>
-        <div className="text-xs text-[#8a8f88]">Restaurants Edition</div>
+        <div className="font-bold text-[#1c2620]">Resto &amp; Cafe Management</div>
+        <div className="text-xs text-[#8a8f88]">by Seawise Studio</div>
       </div>
     </div>
   );

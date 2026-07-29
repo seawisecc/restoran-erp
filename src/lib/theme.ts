@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-// Seawise Enterprise Apps — Restaurants Edition
+// Resto & Cafe Management by Seawise Studio
 // Ambient page backdrop: soft green -> cream -> peach (selaras Pharmacy Edition)
 export const AMBIENT: CSSProperties = {
   background:

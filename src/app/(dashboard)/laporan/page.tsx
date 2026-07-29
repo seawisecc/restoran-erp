@@ -34,7 +34,7 @@ export default async function LaporanPage() {
     .order("name");
 
   // Secara logika paid_at selalu ada isinya buat order berstatus
-  // "paid" (di-set otomatis pas payOrder dijalankan) — tapi kolomnya
+  // "paid" (di-set otomatis pas payOrder dijalankan) - tapi kolomnya
   // sendiri di database nullable (karena order yang belum dibayar
   // emang belum punya paid_at). Filter di sini biar tipe data yang
   // dikirim ke client component bener-bener non-null.

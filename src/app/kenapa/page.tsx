@@ -30,18 +30,18 @@ export const metadata: Metadata = {
     type: "website",
     locale: "id_ID",
     url: "/kenapa",
-    siteName: "Seawise Enterprise Apps",
-    title: "Seawise Restaurants Edition — mulai Rp4.700 per hari",
+    siteName: "Resto & Cafe Management by Seawise Studio",
+    title: "Resto & Cafe Management - mulai Rp4.700 per hari",
     description: pageDescription,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Seawise Restaurants Edition — mulai Rp4.700 per hari",
+    title: "Resto & Cafe Management - mulai Rp4.700 per hari",
     description: pageDescription,
   },
 };
 
-const CONTACT = "mailto:seawise.cc@gmail.com?subject=Tanya%20Seawise%20Restaurants%20Edition";
+const CONTACT = "mailto:seawise.cc@gmail.com?subject=Tanya%20Resto%20%26%20Cafe%20Management";
 
 /* ────────────────────────── komponen kecil ────────────────────────── */
 
@@ -56,12 +56,12 @@ function Logo({ light = false }: { light?: boolean }) {
         <div
           className={`text-sm font-semibold ${light ? "text-white" : "text-[#1c2620]"}`}
         >
-          Seawise Enterprise
+          Resto &amp; Cafe Management
         </div>
         <div
           className={`text-[11px] ${light ? "text-white/60" : "text-[#8a8f88]"}`}
         >
-          Restaurants Edition
+          by Seawise Studio
         </div>
       </div>
     </div>
@@ -76,7 +76,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Panel mockup — bingkai lembut ala device Apple. */
+/** Panel mockup - bingkai lembut ala device Apple. */
 function Frame({
   children,
   tone = "light",
@@ -374,7 +374,7 @@ export default function KenapaPage() {
   ];
 
   const included = [
-    "Semua fitur — tanpa batasan transaksi",
+    "Semua fitur - tanpa batasan transaksi",
     "Multi-outlet & multi-pengguna",
     "Layar dapur real-time & QR order",
     "Laporan penjualan & riwayat lengkap",
@@ -425,7 +425,7 @@ export default function KenapaPage() {
         />
         <div className="relative mx-auto max-w-5xl px-6 pb-16 pt-20 text-center md:pb-24 md:pt-28">
           <p className="mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-[#c2632f]">
-            Sistem Manajemen Restoran
+Sistem Manajemen Resto &amp; Cafe
           </p>
           <h1 className="mx-auto max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight text-[#1c2620] sm:text-5xl md:text-6xl">
             Restoran Anda,
@@ -434,7 +434,7 @@ export default function KenapaPage() {
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-[#5f665f] md:text-lg">
             Kasir per meja yang instan, layar dapur real-time, QR order, stok &amp;
-            HPP per porsi, sampai laporan — semuanya dalam satu aplikasi yang
+            HPP per porsi, sampai laporan - semuanya dalam satu aplikasi yang
             dirancang khusus untuk restoran Indonesia.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
@@ -469,7 +469,7 @@ export default function KenapaPage() {
               Mengelola restoran nggak harus ribet.
             </h2>
             <p className="mt-4 text-base text-[#5f665f]">
-              Kebocoran kecil yang diam-diam menggerus margin — dan bikin pusing
+              Kebocoran kecil yang diam-diam menggerus margin - dan bikin pusing
               saat tutup buku.
             </p>
           </div>
@@ -507,7 +507,7 @@ export default function KenapaPage() {
         <FeatureSection
           eyebrow="Kasir per Meja"
           title="Satu ketukan, langsung jalan."
-          body="Denah meja terlihat jelas — mana yang kosong, mana yang terisi dan sudah berapa lama. Ketuk meja, layar menu terbuka seketika tanpa loading. Tambah item langsung terasa responsif, dan tombol bayar selalu siap diklik. Dibangun agar kasir tetap cepat bahkan di jam sibuk."
+          body="Denah meja terlihat jelas - mana yang kosong, mana yang terisi dan sudah berapa lama. Ketuk meja, layar menu terbuka seketika tanpa loading. Tambah item langsung terasa responsif, dan tombol bayar selalu siap diklik. Dibangun agar kasir tetap cepat bahkan di jam sibuk."
           mock={<TableGridMock />}
         />
         <FeatureSection
@@ -521,13 +521,13 @@ export default function KenapaPage() {
         <FeatureSection
           eyebrow="QR Order Meja"
           title="Tamu pesan dari mejanya sendiri."
-          body="Cetak QR untuk tiap meja langsung dari aplikasi. Tamu scan, lihat menu, lalu memesan dari HP mereka — pesanan masuk ke kasir dan dapur tanpa perlu dicatat ulang. Antrean di kasir berkurang, salah catat pesanan nyaris hilang."
+          body="Cetak QR untuk tiap meja langsung dari aplikasi. Tamu scan, lihat menu, lalu memesan dari HP mereka - pesanan masuk ke kasir dan dapur tanpa perlu dicatat ulang. Antrean di kasir berkurang, salah catat pesanan nyaris hilang."
           mock={<QrMock />}
         />
         <FeatureSection
           eyebrow="Stok & HPP"
           title="Tahu untung di tiap piring."
-          body="Susun resep bahan baku untuk tiap menu, dan sistem menghitung modal per porsi secara otomatis. Harga bahan diperbarui sendiri mengikuti pembelian terakhir dengan rata-rata tertimbang — jadi margin yang Anda lihat selalu mencerminkan harga hari ini, bukan tebakan."
+          body="Susun resep bahan baku untuk tiap menu, dan sistem menghitung modal per porsi secara otomatis. Harga bahan diperbarui sendiri mengikuti pembelian terakhir dengan rata-rata tertimbang - jadi margin yang Anda lihat selalu mencerminkan harga hari ini, bukan tebakan."
           mock={<CostingMock />}
           reverse
           tone="cream"
@@ -541,7 +541,7 @@ export default function KenapaPage() {
         <FeatureSection
           eyebrow="Multi-Outlet & Hak Akses"
           title="Banyak cabang, satu kendali."
-          body="Kelola beberapa outlet dalam satu akun dan berpindah cabang dalam sekali klik. Tambahkan anggota tim, lalu pilih modul apa saja yang boleh mereka buka — kasir cukup melihat transaksi, manajer melihat semuanya. Data tiap restoran terisolasi di level database."
+          body="Kelola beberapa outlet dalam satu akun dan berpindah cabang dalam sekali klik. Tambahkan anggota tim, lalu pilih modul apa saja yang boleh mereka buka - kasir cukup melihat transaksi, manajer melihat semuanya. Data tiap restoran terisolasi di level database."
           mock={<AccessMock />}
           reverse
           tone="cream"
@@ -584,7 +584,7 @@ export default function KenapaPage() {
               Hanya Rp4.700 per hari.
             </h2>
             <p className="mt-4 text-base text-[#5f665f]">
-              Lebih murah dari satu porsi makan — untuk sistem yang menjaga
+              Lebih murah dari satu porsi makan - untuk sistem yang menjaga
               seluruh operasional restoran Anda.
             </p>
           </div>
@@ -617,7 +617,7 @@ export default function KenapaPage() {
                 </span>
               </p>
               <p className="mt-3 text-sm text-[#5f665f]">
-                Setara Rp4.700/hari — gratis 2 bulan, hemat Rp340.000 dibanding
+                Setara Rp4.700/hari - gratis 2 bulan, hemat Rp340.000 dibanding
                 bayar bulanan.
               </p>
             </div>
@@ -651,7 +651,7 @@ export default function KenapaPage() {
             Siap membuat restoran lebih tenang?
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/60">
-            Ceritakan kebutuhan restoran Anda — tim Seawise membantu dari
+            Ceritakan kebutuhan restoran Anda - tim Seawise membantu dari
             aktivasi sampai siap dipakai tim di lapangan.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
@@ -677,7 +677,7 @@ export default function KenapaPage() {
           <Logo light />
           <div className="flex items-center gap-2 text-xs text-white/40">
             <ShieldCheck size={13} />
-            <span>© 2026 Seawise Creative · Restaurants Edition</span>
+            <span>© 2026 Seawise Studio · Resto &amp; Cafe Management</span>
           </div>
         </div>
       </footer>

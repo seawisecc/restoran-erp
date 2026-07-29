@@ -10,7 +10,7 @@ import { ACTIVE_COMPANY_COOKIE } from "@/lib/constants";
  * company (misal konsultan/investor yang pegang beberapa resto).
  *
  * Validasi keamanan penting: kita cek dulu companyId yang diminta
- * BENERAN salah satu company yang user ini jadi anggotanya —  supaya
+ * BENERAN salah satu company yang user ini jadi anggotanya -  supaya
  * gak ada cara buat "nyelonong" ke company orang lain cuma dengan
  * kirim companyId sembarangan ke action ini.
  */

@@ -8,11 +8,11 @@ import { ACTIVE_COMPANY_COOKIE } from "@/lib/constants";
  * Server Actions yang butuh scope data ke company tertentu.
  *
  * Kenapa ini penting: RLS di database cuma mastiin user bisa akses
- * SALAH SATU company yang dia jadi anggotanya — RLS gak tau/peduli
+ * SALAH SATU company yang dia jadi anggotanya - RLS gak tau/peduli
  * company mana yang lagi "aktif" di UI (itu concept aplikasi, bukan
  * database). Kalau query cuma ngandelin RLS tanpa filter company_id
  * eksplisit, user yang punya akses ke >1 company bakal lihat data
- * CAMPURAN dari semua company yang dia punya akses — makanya di
+ * CAMPURAN dari semua company yang dia punya akses - makanya di
  * SETIAP query yang company-scoped, WAJIB tambahin
  * .eq("company_id", await getActiveCompanyId()) secara eksplisit.
  */

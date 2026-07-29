@@ -20,7 +20,7 @@ type Order = {
 };
 
 // Klik item buat maju ke status berikutnya. Klik lagi pas udah
-// "Siap" bakal reset balik ke "Antre" — jaga-jaga kalau kepencet
+// "Siap" bakal reset balik ke "Antre" - jaga-jaga kalau kepencet
 // gak sengaja.
 const nextStatus: Record<KdsStatus, KdsStatus> = {
   queued: "preparing",
@@ -61,7 +61,7 @@ export function KdsClient({ initialOrders }: { initialOrders: Order[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // Langganan Realtime — begitu ada perubahan di order_items/orders
+  // Langganan Realtime - begitu ada perubahan di order_items/orders
   // (dari POS, QR Order, atau kasir laen), layar ini otomatis
   // refresh sendiri tanpa perlu reload manual.
   useEffect(() => {
@@ -223,7 +223,7 @@ export function KdsClient({ initialOrders }: { initialOrders: Order[] }) {
                     ))
                   )}
 
-                  {/* Take away perlu konfirmasi serah terima — masakan
+                  {/* Take away perlu konfirmasi serah terima - masakan
                       "siap" belum tentu sudah diambil pelanggan. */}
                   {!order.restaurant_tables &&
                     order.order_items.length > 0 &&

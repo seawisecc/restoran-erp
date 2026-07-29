@@ -270,7 +270,7 @@ export function PembelianClient({
                           </div>
                           {p.received_at && (
                             <p className="mt-2 text-[11px] text-ink-muted">
-                              Diterima {formatDate(p.received_at)} — stok bahan
+                              Diterima {formatDate(p.received_at)} - stok bahan
                               sudah ditambahkan.
                             </p>
                           )}
@@ -333,10 +333,10 @@ export function PembelianClient({
                   </div>
                   <p className="text-xs text-ink-muted md:text-right">
                     <span className="md:hidden">Min: </span>
-                    {m.min_stock > 0 ? `${m.min_stock} ${m.unit}` : "—"}
+                    {m.min_stock > 0 ? `${m.min_stock} ${m.unit}` : "-"}
                   </p>
                   <p className="text-xs text-ink-muted md:text-right">
-                    {m.cost_price > 0 ? rupiah(m.cost_price) : "—"}
+                    {m.cost_price > 0 ? rupiah(m.cost_price) : "-"}
                   </p>
                   <div className="md:text-right">
                     <button

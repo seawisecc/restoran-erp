@@ -88,7 +88,7 @@ export async function updateMenuCategory(id: string, name: string) {
 }
 
 /**
- * Hapus kategori. Menu yang memakainya TIDAK ikut terhapus — cukup
+ * Hapus kategori. Menu yang memakainya TIDAK ikut terhapus - cukup
  * dilepas jadi "Tanpa kategori", supaya tidak ada menu yang hilang
  * gara-gara kategorinya dirapikan.
  */
@@ -127,7 +127,7 @@ export async function getMenuItemRecipe(menuItemId: string) {
 }
 
 /**
- * Nyimpen resep satu menu sekaligus — hapus semua baris lama, ganti
+ * Nyimpen resep satu menu sekaligus - hapus semua baris lama, ganti
  * dengan yang baru. Lebih simpel daripada nge-diff satu-satu, dan
  * resep emang jarang diedit jadi gak masalah soal efisiensi.
  */

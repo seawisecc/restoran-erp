@@ -113,7 +113,7 @@ export function PurchaseFormModal({
             Item Bahan Baku
           </label>
           <p className="mb-2 text-xs text-ink-muted">
-            Ketik nama bahan baku bebas — kalau belum ada, otomatis dibuatkan.
+            Ketik nama bahan baku bebas - kalau belum ada, otomatis dibuatkan.
           </p>
         </div>
 

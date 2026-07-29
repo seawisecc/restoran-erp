@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Dipanggil di awal tiap action buat mastiin yang manggil action ini
- * beneran super admin — pengecekan kedua selain gate di layout.tsx,
+ * beneran super admin - pengecekan kedua selain gate di layout.tsx,
  * biar aman walau action-nya suatu saat dipanggil dari tempat lain.
  */
 async function assertSuperAdmin() {

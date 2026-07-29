@@ -1,6 +1,6 @@
 // Skeleton instan saat pindah menu. Layout (Sidebar/Topbar) tidak ikut
 // re-render antar route, jadi hanya area konten ini yang menampilkan
-// placeholder — perpindahan menu terasa cepat tanpa layar kosong.
+// placeholder - perpindahan menu terasa cepat tanpa layar kosong.
 export default function DashboardLoading() {
   return (
     <div className="sw-anim-fade space-y-4">

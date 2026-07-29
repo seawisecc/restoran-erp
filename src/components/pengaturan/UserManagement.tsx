@@ -273,10 +273,10 @@ export function UserManagement({ team }: { team: TeamMember[] }) {
               }`}
             >
               <div className="text-sm font-semibold text-ink">
-                {m.full_name || "—"}
+                {m.full_name || "-"}
               </div>
               <div className="min-w-0 truncate text-sm text-ink-muted">
-                {m.email || "—"}
+                {m.email || "-"}
               </div>
               <div className="text-sm text-ink">{ROLE_LABELS[m.role]}</div>
               <div className="text-sm text-ink-muted">

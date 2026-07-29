@@ -31,7 +31,7 @@ export async function createClient() {
             );
           } catch {
             // setAll dipanggil dari Server Component (bukan Server Action /
-            // Route Handler) — aman diabaikan kalau middleware sudah
+            // Route Handler) - aman diabaikan kalau middleware sudah
             // menangani refresh session.
           }
         },

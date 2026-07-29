@@ -57,7 +57,7 @@ export default async function PengaturanPage() {
   const logoUrl = !logoError ? (logoRow?.logo_url ?? null) : null;
 
   // Kalau kolomnya belum ada (migrasi 0010 belum jalan), tandai supaya
-  // UI bisa kasih tahu penyebabnya — bukan gagal diam-diam.
+  // UI bisa kasih tahu penyebabnya - bukan gagal diam-diam.
   const chargeReady = !chargeError && Boolean(chargeRow);
   const charges = {
     tax_enabled: chargeRow?.tax_enabled ?? true,

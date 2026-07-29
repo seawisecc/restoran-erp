@@ -79,7 +79,7 @@ function rupiah(n: number) {
 /**
  * CSS cetak yang menyesuaikan ukuran kertas printer nota.
  * Aturan dasar (menyembunyikan elemen selain #struk-print) sudah ada di
- * globals.css — di sini kita atur lebar kertas, font, dan memastikan
+ * globals.css - di sini kita atur lebar kertas, font, dan memastikan
  * struk tercetak penuh (bukan terpotong scroll modal) serta hitam pekat.
  */
 function printCss(paper: string) {
@@ -100,7 +100,7 @@ function printCss(paper: string) {
 @media print {
   ${page}
   html, body { background: #fff !important; }
-  /* Struk harus tercetak utuh — batas tinggi & scroll modal dilepas. */
+  /* Struk harus tercetak utuh - batas tinggi & scroll modal dilepas. */
   #struk-print {
     ${box}
     max-height: none !important;
@@ -271,7 +271,7 @@ export function PosClient({
     });
   }
 
-  /** Pesanan bungkus/bawa pulang — order tanpa meja + nomor antrian. */
+  /** Pesanan bungkus/bawa pulang - order tanpa meja + nomor antrian. */
   function submitTakeaway(e: React.FormEvent) {
     e.preventDefault();
     if (!activeOutletId) return;
@@ -526,7 +526,7 @@ export function PosClient({
               className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm outline-none focus:border-accent"
             />
             <p className="mt-1 text-xs text-ink-muted">
-              Isi kalau pelanggan terdaftar — poin loyalty otomatis terpakai
+              Isi kalau pelanggan terdaftar - poin loyalty otomatis terpakai
               saat bayar.
             </p>
           </div>
@@ -712,7 +712,7 @@ export function PosClient({
   if (view === "order") {
     return (
       // dvh (bukan vh) supaya tinggi ikut menyusut saat toolbar Safari
-      // muncul/hilang — vh bikin halaman lebih tinggi dari layar dan
+      // muncul/hilang - vh bikin halaman lebih tinggi dari layar dan
       // konten paling bawah tertutup bar navigasi.
       <div className="-m-4 flex min-h-[calc(100dvh-64px)] flex-col pb-16 md:-m-6 md:flex-row md:pb-0">
         {/* ===== Kiri: grid menu ===== */}
@@ -801,7 +801,7 @@ export function PosClient({
         <aside className="flex w-full flex-col border-t border-surface-border bg-surface-card md:w-80 md:border-l md:border-t-0">
           <div className="p-4">
             <h3 className="text-base font-bold text-ink">
-              Pesanan &mdash; {order?.label ?? "Pesanan"}
+              Pesanan - {order?.label ?? "Pesanan"}
             </h3>
             <p className="text-xs text-ink-muted">
               {orderLoading ? "Menyiapkan..." : `${cart.length} item`}

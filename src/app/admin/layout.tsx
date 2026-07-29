@@ -21,7 +21,7 @@ export default async function AdminLayout({
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // Bukan super admin — gak boleh masuk sama sekali, balikin ke
+  // Bukan super admin - gak boleh masuk sama sekali, balikin ke
   // dashboard tenant biasa.
   if (!adminRow) redirect("/dashboard");
 
@@ -30,7 +30,7 @@ export default async function AdminLayout({
       <header className="flex h-16 items-center justify-between border-b border-surface-border bg-sidebar px-6">
         <div className="flex items-center gap-2 text-sidebar-foreground">
           <ShieldCheck size={18} />
-          <span className="font-bold">Seawise Enterprise Apps — Admin Panel</span>
+          <span className="font-bold">Resto &amp; Cafe Management | Admin Panel</span>
         </div>
         <Link
           href="/dashboard"

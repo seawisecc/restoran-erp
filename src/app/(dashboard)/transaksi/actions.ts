@@ -8,7 +8,7 @@ import { startOfDayWib } from "@/lib/queue";
 /**
  * Versi SPA dari openOrCreateOrder: TIDAK redirect, tapi MENGEMBALIKAN
  * orderId + daftar item yang sudah ada. Dipanggil pas kasir klik meja
- * di POS SPA — hasilnya dipakai buat langsung nampilin layar order
+ * di POS SPA - hasilnya dipakai buat langsung nampilin layar order
  * tanpa pindah halaman.
  */
 export async function openTableOrder(tableId: string) {
@@ -64,7 +64,7 @@ export async function openTableOrder(tableId: string) {
 }
 
 /**
- * Bikin order TAKE AWAY — order tanpa meja (table_id null), dengan
+ * Bikin order TAKE AWAY - order tanpa meja (table_id null), dengan
  * nomor antrian otomatis yang dihitung per outlet dan reset tiap hari.
  * Nama pelanggan opsional (buat dipanggil saat pesanan siap).
  */
@@ -83,7 +83,7 @@ export async function openTakeawayOrder(
   // PostgreSQL, "ORDER BY queue_number DESC" menaruh NULL PALING ATAS,
   // jadi kalau ada order take away lama yang belum punya nomor (mis.
   // dibuat sebelum migrasi 0012), dia yang keambil dan nomor antrian
-  // selalu balik ke 1 — bikin nomor kembar dalam satu hari.
+  // selalu balik ke 1 - bikin nomor kembar dalam satu hari.
   //
   // Statusnya sengaja TIDAK difilter: order yang sudah dibayar tetap
   // dihitung, supaya nomor terus berlanjut sampai ganti hari.
@@ -261,7 +261,7 @@ export async function payOrder(
     .maybeSingle();
   if (!order) throw new Error("Order tidak ditemukan.");
 
-  // Total dihitung ULANG di sini (server) dari order_items — karena
+  // Total dihitung ULANG di sini (server) dari order_items - karena
   // add/qty sengaja gak nyimpen total tiap tap (demi kecepatan). Ini
   // juga jadi sumber kebenaran biar gak bisa dimanipulasi dari client.
   const { data: orderItems } = await supabase
@@ -380,11 +380,11 @@ export async function payOrder(
   }
 
   // Tetap revalidate biar render server berikutnya fresh, tapi TIDAK
-  // redirect — POS sekarang berupa SPA yang menangani UI setelah bayar
+  // redirect - POS sekarang berupa SPA yang menangani UI setelah bayar
   // lewat state (tanpa navigasi).
   revalidatePath("/transaksi");
 
-  // Angka-angka ini dikembalikan buat dicetak di nota — sumbernya
+  // Angka-angka ini dikembalikan buat dicetak di nota - sumbernya
   // hasil hitung server, jadi struk pasti sama dengan yang tersimpan.
   return {
     success: true as const,

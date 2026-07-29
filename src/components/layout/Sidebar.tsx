@@ -52,7 +52,7 @@ export function Sidebar() {
     try {
       setCollapsed(localStorage.getItem(STORAGE_KEY) === "1");
     } catch {
-      /* localStorage tidak tersedia — abaikan */
+      /* localStorage tidak tersedia - abaikan */
     }
   }, []);
 
@@ -94,10 +94,10 @@ export function Sidebar() {
         {!collapsed && (
           <div className="min-w-0 leading-tight">
             <h1 className="truncate text-sm font-semibold text-sidebar-foreground">
-              Seawise Enterprise
+              Resto &amp; Cafe Management
             </h1>
             <p className="truncate text-xs text-sidebar-muted">
-              Restaurants Edition
+              by Seawise Studio
             </p>
           </div>
         )}

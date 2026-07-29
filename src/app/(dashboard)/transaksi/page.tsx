@@ -12,7 +12,7 @@ export default async function TransaksiPage({
 
   // Muat SEMUA data yang dibutuhkan POS sekali di sini: outlet, meja,
   // order terbuka, kategori & menu. Menu tidak akan di-fetch lagi tiap
-  // buka meja — itu kunci "sat set"-nya (SPA, tanpa navigasi/refetch).
+  // buka meja - itu kunci "sat set"-nya (SPA, tanpa navigasi/refetch).
   const [
     { data: outlets },
     { data: tables },

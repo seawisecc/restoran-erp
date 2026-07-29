@@ -167,7 +167,7 @@ export function AdminClient({ companies }: { companies: Company[] }) {
                         {c.admin_email}
                       </span>
                     ) : (
-                      <span className="text-ink-muted">&mdash;</span>
+                      <span className="text-ink-muted">-</span>
                     )}
                   </div>
 
@@ -198,7 +198,7 @@ export function AdminClient({ companies }: { companies: Company[] }) {
                         {formatDate(c.subscription_expires_at)}
                       </span>
                     ) : (
-                      <span className="text-ink-muted">&mdash;</span>
+                      <span className="text-ink-muted">-</span>
                     )}
                   </div>
 

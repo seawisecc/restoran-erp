@@ -96,7 +96,7 @@ export default async function DashboardLayout({
     charge.service_rate = Number(chargeRow.service_rate ?? 0);
   }
 
-  // Logo usaha — defensif juga (kalau migrasi 0014 belum jalan, null).
+  // Logo usaha - defensif juga (kalau migrasi 0014 belum jalan, null).
   let logoUrl: string | null = null;
   const { data: logoRow, error: logoError } = await supabase
     .from("companies")
@@ -127,7 +127,7 @@ export default async function DashboardLayout({
     .maybeSingle();
   const isSuperAdmin = Boolean(adminRow);
 
-  // Company belum di-approve super admin — blokir akses ke dashboard,
+  // Company belum di-approve super admin - blokir akses ke dashboard,
   // tampilin layar tunggu/ditolak, bukan langsung nendang ke /login
   // (biar user ngerti kenapa dan gak keliru dikira error).
   if (activeCompany.company.status !== "approved") {
@@ -151,7 +151,7 @@ export default async function DashboardLayout({
     );
   }
 
-  // Company approved tapi masa aktif langganannya udah lewat —
+  // Company approved tapi masa aktif langganannya udah lewat -
   // blokir juga, tapi kasih pesan yang beda biar jelas ini soal
   // pembayaran/perpanjangan, bukan soal approval.
   const expiresAt = activeCompany.company.subscription_expires_at;

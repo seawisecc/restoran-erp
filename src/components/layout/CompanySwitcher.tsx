@@ -18,7 +18,7 @@ export function CompanySwitcher({
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Kalau user cuma punya akses ke 1 company, gak perlu dropdown —
+  // Kalau user cuma punya akses ke 1 company, gak perlu dropdown -
   // cukup label statis biar gak nambah langkah yang gak perlu.
   if (companies.length <= 1) {
     return (

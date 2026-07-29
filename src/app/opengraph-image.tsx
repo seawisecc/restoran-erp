@@ -5,7 +5,7 @@ import { ImageResponse } from "next/og";
 // logo di atas, headline besar, deskripsi, lalu chip fitur.
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "Seawise Enterprise Apps — Restaurants Edition";
+export const alt = "Resto & Cafe Management by Seawise Studio";
 
 export default function OpengraphImage() {
   const chips = [
@@ -73,10 +73,10 @@ export default function OpengraphImage() {
             style={{ display: "flex", flexDirection: "column", marginLeft: 18 }}
           >
             <div style={{ fontSize: 27, fontWeight: 700, color: "#ffffff" }}>
-              Seawise Enterprise Apps
+              Resto &amp; Cafe Management
             </div>
             <div style={{ fontSize: 19, color: "rgba(255,255,255,0.55)" }}>
-              Restaurants Edition
+              by Seawise Studio
             </div>
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function OpengraphImage() {
               lineHeight: 1.4,
             }}
           >
-            porsi, hingga laporan — dalam satu aplikasi.
+            porsi, hingga laporan - dalam satu aplikasi.
           </div>
         </div>
 

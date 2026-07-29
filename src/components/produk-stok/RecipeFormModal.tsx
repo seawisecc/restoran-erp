@@ -53,7 +53,7 @@ export function RecipeFormModal({
   if (!open || !menuItemId) return null;
 
   // Disalin ke const di scope komponen utama (bukan di dalam
-  // handleSave) — TypeScript gak nyimpen penyempitan tipe dari guard
+  // handleSave) - TypeScript gak nyimpen penyempitan tipe dari guard
   // di atas ke dalam nested function manapun (baik handleSave maupun
   // closure startTransition di dalemnya), jadi harus ditangkep di
   // sini biar tipenya "string" nempel permanen.
@@ -101,7 +101,7 @@ export function RecipeFormModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="card w-full max-w-lg p-6">
         <div className="mb-1 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-ink">Resep &mdash; {menuItemName}</h3>
+          <h3 className="text-lg font-bold text-ink">Resep - {menuItemName}</h3>
           <button onClick={onClose} className="text-ink-muted hover:text-ink">
             <X size={18} />
           </button>

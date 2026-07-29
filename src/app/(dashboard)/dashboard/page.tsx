@@ -31,7 +31,7 @@ export default async function DashboardPage() {
     { data: materials },
     { data: openOrders },
   ] = await Promise.all([
-    // Transaksi lunas 7 hari terakhir — dipakai untuk grafik & ringkasan.
+    // Transaksi lunas 7 hari terakhir - dipakai untuk grafik & ringkasan.
     supabase
       .from("orders")
       .select("id, total, paid_at")

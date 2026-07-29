@@ -17,12 +17,12 @@ type SignUpResult = { success: true } | { success: false; error: string };
  * Alur onboarding self-service:
  * 1. Bikin akun user lewat Supabase Auth (client biasa, bukan admin)
  * 2. Bikin company + hubungkan user itu sebagai 'owner' + bikin 1
- *    outlet default — ini WAJIB pakai admin client (service role),
+ *    outlet default - ini WAJIB pakai admin client (service role),
  *    karena user yang baru daftar belum punya baris apapun di
  *    company_users, jadi RLS bakal nolak insert langsung dari dia.
  *
  * Kalau step 2 gagal padahal step 1 udah sukses, user tetap punya
- * akun tapi belum ke-attach ke company manapun — nanti pas dia
+ * akun tapi belum ke-attach ke company manapun - nanti pas dia
  * login, layout dashboard bakal redirect balik ke /login karena
  * gak nemu membership. Kasus ini jarang terjadi tapi baik untuk
  * diketahui.
@@ -60,7 +60,7 @@ export async function signUpAndCreateCompany(
 
   const admin = createAdminClient();
 
-  // Pastikan slug unik — kalau nama restoran bentrok, tambahin suffix.
+  // Pastikan slug unik - kalau nama restoran bentrok, tambahin suffix.
   let slug = slugify(companyName) || "resto";
   const { data: existingSlug } = await admin
     .from("companies")

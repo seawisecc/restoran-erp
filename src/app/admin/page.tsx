@@ -3,7 +3,7 @@ import { AdminClient } from "@/components/admin/AdminClient";
 import type { CompanyStatus } from "@/types";
 
 export default async function AdminPage() {
-  // Sengaja pakai admin client (service role) di sini — halaman ini
+  // Sengaja pakai admin client (service role) di sini - halaman ini
   // memang butuh lihat SEMUA company lintas tenant, yang gak mungkin
   // kebaca lewat client biasa (RLS cuma ngasih company milik sendiri).
   // Aman karena akses ke halaman ini sendiri udah digate ketat di
@@ -45,7 +45,7 @@ export default async function AdminPage() {
 
   // Kolom `status` di database bertipe `string` biasa (kita pakai
   // CHECK constraint di SQL, bukan enum asli Postgres), jadi perlu
-  // di-cast ke union type yang lebih ketat di sini — nilainya udah
+  // di-cast ke union type yang lebih ketat di sini - nilainya udah
   // dijamin salah satu dari 3 itu oleh constraint di database.
   const typedCompanies = (companies ?? []).map((c) => ({
     ...c,

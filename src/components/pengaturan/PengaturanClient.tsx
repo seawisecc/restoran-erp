@@ -177,7 +177,7 @@ export function PengaturanClient({
   const [paperError, setPaperError] = useState<string | null>(null);
   const [paper, setPaper] = useState(receiptPaper);
 
-  // Controlled — supaya nilai yang tampil selalu sinkron dengan yang
+  // Controlled - supaya nilai yang tampil selalu sinkron dengan yang
   // tersimpan di database, bukan sisa isian lama di DOM.
   const [taxOn, setTaxOn] = useState(charges.tax_enabled);
   const [taxRate, setTaxRate] = useState(String(charges.tax_rate));

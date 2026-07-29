@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * PENTING soal keamanan: semua fungsi di file ini dipanggil dari
  * halaman PUBLIK (tanpa login) yang diakses tamu lewat scan QR code.
  * Makanya di sini kita pakai admin client (service role) yang bypass
- * RLS — tapi setiap operasi WAJIB divalidasi manual di kode, gak
+ * RLS - tapi setiap operasi WAJIB divalidasi manual di kode, gak
  * boleh percaya begitu aja sama tableId/menuItemId yang dikirim dari
  * browser. Prinsipnya: derive semua data (company_id, outlet_id) dari
  * tableId di database, jangan pernah terima company_id dari client.
@@ -69,7 +69,7 @@ async function recalcTotals(orderId: string) {
 type CartItem = { id: string; name: string; price: number; qty: number };
 
 /**
- * Dipanggil SEKALI pas tamu klik "Kirim Pesanan" — bukan tiap kali
+ * Dipanggil SEKALI pas tamu klik "Kirim Pesanan" - bukan tiap kali
  * tap menu. Sebelum ini, keranjang cuma hidup di state React sisi
  * browser, gak nyentuh database sama sekali.
  */

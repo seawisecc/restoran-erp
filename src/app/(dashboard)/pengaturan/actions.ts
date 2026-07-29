@@ -32,7 +32,7 @@ async function assertOwner(companyId: string) {
  * Update baris `companies` dengan aman.
  *
  * Kenapa pakai admin client: kalau RLS pada tabel companies tidak
- * mengizinkan UPDATE dari user biasa, PostgREST TIDAK melempar error —
+ * mengizinkan UPDATE dari user biasa, PostgREST TIDAK melempar error -
  * dia balas sukses dengan 0 baris terubah. Akibatnya penyimpanan gagal
  * diam-diam dan nilainya terlihat "balik lagi". Kita sudah memverifikasi
  * pemanggilnya owner lewat assertOwner(), jadi aman memakai service role.
@@ -51,7 +51,7 @@ async function updateCompanyRow(companyId: string, patch: CompanyUpdate) {
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) {
     throw new Error(
-      "Pengaturan gagal disimpan — data restoran tidak ditemukan atau tidak bisa diubah.",
+      "Pengaturan gagal disimpan - data restoran tidak ditemukan atau tidak bisa diubah.",
     );
   }
 }
