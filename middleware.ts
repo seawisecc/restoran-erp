@@ -11,8 +11,10 @@ export const config = {
      * Jalankan middleware di semua path KECUALI:
      * - static files (_next/static, _next/image)
      * - favicon
+     * - aset PWA (service worker + manifest), harus bisa diambil
+     *   tanpa kena refresh session sama sekali
      * - file gambar
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

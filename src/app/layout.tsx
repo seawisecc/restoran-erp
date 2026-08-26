@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -42,6 +44,15 @@ export const metadata: Metadata = {
   },
   description,
   applicationName: "Resto & Cafe Management",
+  // PWA: manifest-nya dibangkitkan src/app/manifest.ts
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Resto Manager",
+    statusBarStyle: "black-translucent",
+  },
+  // Biar teks kayak nomor meja/telepon gak diubah jadi link sama iOS.
+  formatDetection: { telephone: false },
   openGraph: {
     type: "website",
     locale: "id_ID",
@@ -57,6 +68,15 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#1e3a2c",
+  width: "device-width",
+  initialScale: 1,
+  // Dipakai supaya konten nempel penuh di layar pas dibuka sebagai
+  // aplikasi ter-install (standalone) di ponsel berponi.
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -64,7 +84,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {children}
+        <ServiceWorkerRegister />
+        <InstallPrompt />
+      </body>
     </html>
   );
 }
