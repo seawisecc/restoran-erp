@@ -70,6 +70,18 @@ alter table public.raw_materials enable row level security;
 alter table public.purchases enable row level security;
 alter table public.purchase_items enable row level security;
 
+-- Grant akses Data API (wajib sejak Supabase 30 Okt 2026: tabel baru
+-- di public gak otomatis ke-grant). anon sengaja gak dikasih — akses
+-- publik (QR order) lewat service role. RLS tetap yang nyaring baris.
+grant select, insert, update, delete on public.suppliers to authenticated;
+grant select, insert, update, delete on public.suppliers to service_role;
+grant select, insert, update, delete on public.raw_materials to authenticated;
+grant select, insert, update, delete on public.raw_materials to service_role;
+grant select, insert, update, delete on public.purchases to authenticated;
+grant select, insert, update, delete on public.purchases to service_role;
+grant select, insert, update, delete on public.purchase_items to authenticated;
+grant select, insert, update, delete on public.purchase_items to service_role;
+
 create policy "tenant_isolation_suppliers"
   on public.suppliers for all
   using (company_id in (select public.get_my_company_ids()))

@@ -28,6 +28,13 @@ create table public.platform_admins (
 
 alter table public.platform_admins enable row level security;
 
+-- Grant akses Data API (wajib sejak Supabase 30 Okt 2026: tabel baru
+-- di public gak otomatis ke-grant). anon sengaja gak dikasih — akses
+-- publik (QR order) lewat service role. RLS tetap yang nyaring baris.
+-- authenticated cuma select (cek "apakah gw admin?"); tulis cuma via service role.
+grant select on public.platform_admins to authenticated;
+grant select, insert, update, delete on public.platform_admins to service_role;
+
 -- User cuma boleh lihat baris dirinya sendiri (buat ngecek "apakah
 -- gw admin?"). Insert/update/delete sengaja TIDAK dikasih policy
 -- sama sekali — jadi cuma bisa dilakukan lewat service role (admin

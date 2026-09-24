@@ -24,6 +24,12 @@ create index on public.orders (customer_id);
 
 alter table public.customers enable row level security;
 
+-- Grant akses Data API (wajib sejak Supabase 30 Okt 2026: tabel baru
+-- di public gak otomatis ke-grant). anon sengaja gak dikasih — akses
+-- publik (QR order) lewat service role. RLS tetap yang nyaring baris.
+grant select, insert, update, delete on public.customers to authenticated;
+grant select, insert, update, delete on public.customers to service_role;
+
 create policy "tenant_isolation_customers"
   on public.customers for all
   using (company_id in (select public.get_my_company_ids()))

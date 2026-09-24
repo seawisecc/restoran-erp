@@ -62,6 +62,16 @@ alter table public.restaurant_tables enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 
+-- Grant akses Data API (wajib sejak Supabase 30 Okt 2026: tabel baru
+-- di public gak otomatis ke-grant). anon sengaja gak dikasih — akses
+-- publik (QR order) lewat service role. RLS tetap yang nyaring baris.
+grant select, insert, update, delete on public.restaurant_tables to authenticated;
+grant select, insert, update, delete on public.restaurant_tables to service_role;
+grant select, insert, update, delete on public.orders to authenticated;
+grant select, insert, update, delete on public.orders to service_role;
+grant select, insert, update, delete on public.order_items to authenticated;
+grant select, insert, update, delete on public.order_items to service_role;
+
 create policy "tenant_isolation_restaurant_tables"
   on public.restaurant_tables for all
   using (company_id in (select public.get_my_company_ids()))

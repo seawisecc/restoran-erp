@@ -33,6 +33,12 @@ create index on public.menu_item_recipes (raw_material_id);
 
 alter table public.menu_item_recipes enable row level security;
 
+-- Grant akses Data API (wajib sejak Supabase 30 Okt 2026: tabel baru
+-- di public gak otomatis ke-grant). anon sengaja gak dikasih — akses
+-- publik (QR order) lewat service role. RLS tetap yang nyaring baris.
+grant select, insert, update, delete on public.menu_item_recipes to authenticated;
+grant select, insert, update, delete on public.menu_item_recipes to service_role;
+
 -- Scoping-nya lewat menu_items (gak ada company_id langsung di sini)
 create policy "tenant_isolation_menu_item_recipes"
   on public.menu_item_recipes for all
